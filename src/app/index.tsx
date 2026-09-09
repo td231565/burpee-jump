@@ -14,14 +14,26 @@ import {
   getPreviousMonth,
 } from '../features/calendar/date-utils';
 import { MonthCalendar } from '../features/calendar/components/month-calendar';
+import { AudioSettingsModal } from '../features/calendar/components/audio-settings-modal';
 import { IconButton } from '../components/ui/icon-button';
 import { getCompletionByDate, getCompletionsForMonth } from '../data/completions';
+import {
+  getAudioPreferences,
+  updateAudioPreferences,
+  type AudioPreferences,
+} from '../data/audio-preferences';
 
 export default function HomeScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
   const [isTodayCompleted, setIsTodayCompleted] = useState(false);
   const [completionsMap, setCompletionsMap] = useState<Record<string, boolean>>({});
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [audioPreferences, setAudioPreferences] = useState<AudioPreferences>({
+    voice_enabled: true,
+    cues_enabled: true,
+    music_enabled: true,
+  });
 
   const today = new Date();
   const todayKey = formatLocalDateKey(today);
@@ -58,6 +70,17 @@ export default function HomeScreen() {
     });
   };
 
+  const handleUpdatePreferences = async (newPrefs: AudioPreferences) => {
+    setAudioPreferences(newPrefs);
+    if (db) {
+      try {
+        await updateAudioPreferences(db, newPrefs);
+      } catch {
+        // 偏好寫入失敗維持原狀
+      }
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -66,13 +89,15 @@ export default function HomeScreen() {
         if (!db) return;
         try {
           const { startDate, endDate } = getMonthDateRange(viewYear, viewMonth);
-          const [todayRecord, monthRecords] = await Promise.all([
+          const [todayRecord, monthRecords, prefs] = await Promise.all([
             getCompletionByDate(db, todayKey),
             getCompletionsForMonth(db, startDate, endDate),
+            getAudioPreferences(db),
           ]);
 
           if (isMounted) {
             setIsTodayCompleted(!!todayRecord);
+            setAudioPreferences(prefs);
             const map: Record<string, boolean> = {};
             monthRecords.forEach((r) => {
               map[r.local_date] = true;
@@ -114,7 +139,7 @@ export default function HomeScreen() {
               ›
             </IconButton>
           </View>
-          <View style={styles.todayButtonContainer}>
+          <View style={styles.headerActions}>
             <Button
               variant="secondary"
               onPress={handleBackToToday}
@@ -123,6 +148,12 @@ export default function HomeScreen() {
             >
               今天
             </Button>
+            <IconButton
+              onPress={() => setIsSettingsOpen(true)}
+              accessibilityLabel="設定"
+            >
+              ⚙
+            </IconButton>
           </View>
         </View>
 
@@ -136,6 +167,14 @@ export default function HomeScreen() {
             onSelectDate={handleSelectDate}
           />
         </View>
+
+        {/* 音訊設定 Modal */}
+        <AudioSettingsModal
+          visible={isSettingsOpen}
+          preferences={audioPreferences}
+          onUpdatePreferences={handleUpdatePreferences}
+          onClose={() => setIsSettingsOpen(false)}
+        />
 
         {/* 底部主要操作：目前月份為開始/已完成，非目前月份為回到今天 */}
         <View style={styles.footer}>
@@ -188,7 +227,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: colors.ink,
   },
-  todayButtonContainer: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginTop: spacing.xs,
   },
   todayButton: {

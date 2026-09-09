@@ -217,5 +217,22 @@ describe('首頁日曆 (Phase 2 Tracer Slice)', () => {
       expect(completedButton).toBeTruthy();
     });
   });
+
+  describe('頁首音訊設定按鈕 (Phase 4)', () => {
+    it('點擊頁首設定按鈕開啟音訊設定 Modal', async () => {
+      render(<HomeScreen />);
+
+      const settingsButton = screen.getByRole('button', { name: '設定' });
+      expect(settingsButton).toBeTruthy();
+
+      fireEvent.press(settingsButton);
+
+      expect(screen.getByText('音訊設定')).toBeTruthy();
+      expect(screen.getByText('導引語音')).toBeTruthy();
+      expect(screen.getByText('提示音效')).toBeTruthy();
+      expect(screen.getByText('背景音樂')).toBeTruthy();
+    });
+  });
 });
+
 
