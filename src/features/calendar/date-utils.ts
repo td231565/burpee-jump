@@ -33,6 +33,55 @@ export function formatMonthDay(date: Date): string {
 }
 
 /**
+ * 格式化 YYYY-MM-DD 日期字串為繁體中文完整年月日顯示 (例: 2026 年 9 月 9 日)
+ */
+export function formatDetailDate(localDate: string): string {
+  const [yearStr, monthStr, dayStr] = localDate.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  return `${year} 年 ${month} 月 ${day} 日`;
+}
+
+/**
+ * 將 UTC 完成時間依指定或目前時區格式化為 12 小時制字串，並標示「目前時區」
+ */
+export function formatCompletedDateTime(
+  utcIsoString: string,
+  timeZone?: string
+): string {
+  const date = new Date(utcIsoString);
+  const tzOptions = timeZone ? { timeZone } : {};
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    ...tzOptions,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+
+  const year = parseInt(getPart('year'), 10);
+  const month = parseInt(getPart('month'), 10);
+  const day = parseInt(getPart('day'), 10);
+  const hour24 = parseInt(getPart('hour'), 10);
+  const minute = getPart('minute').padStart(2, '0');
+
+  const period = hour24 < 12 ? '上午' : '下午';
+  let hour12 = hour24 % 12;
+  if (hour12 === 0) {
+    hour12 = 12;
+  }
+
+  return `${year} 年 ${month} 月 ${day} 日 ${period} ${hour12}:${minute}（目前時區）`;
+}
+
+/**
  * 判斷兩個日期是否為同一個當地日
  */
 export function isSameLocalDate(d1: Date, d2: Date): boolean {
@@ -57,3 +106,74 @@ export function getMonthDateRange(year: number, month: number): {
     endDate: formatLocalDateKey(lastDay),
   };
 }
+
+export interface CalendarCell {
+  localDate: string;
+  day: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+}
+
+/**
+ * 產生指定月份的 42 格日曆資料 (6 週 × 7 天，週一為每週第一天)
+ */
+export function generateMonthGrid(
+  year: number,
+  month: number,
+  today: Date = new Date()
+): CalendarCell[] {
+  const todayKey = formatLocalDateKey(today);
+  const firstOfMonth = new Date(year, month - 1, 1);
+  const leadingDays = (firstOfMonth.getDay() + 6) % 7;
+
+  const cells: CalendarCell[] = [];
+  for (let i = 0; i < 42; i++) {
+    const cellDate = new Date(year, month - 1, 1 - leadingDays + i);
+    const localDate = formatLocalDateKey(cellDate);
+    const isCurrentMonth =
+      cellDate.getFullYear() === year && cellDate.getMonth() + 1 === month;
+    const isToday = localDate === todayKey;
+    const isPast = localDate < todayKey;
+    const isFuture = localDate > todayKey;
+
+    cells.push({
+      localDate,
+      day: cellDate.getDate(),
+      isCurrentMonth,
+      isToday,
+      isPast,
+      isFuture,
+    });
+  }
+
+  return cells;
+}
+
+/**
+ * 計算上一月份之年份與月份
+ */
+export function getPreviousMonth(
+  year: number,
+  month: number
+): { year: number; month: number } {
+  if (month === 1) {
+    return { year: year - 1, month: 12 };
+  }
+  return { year, month: month - 1 };
+}
+
+/**
+ * 計算下一月份之年份與月份
+ */
+export function getNextMonth(
+  year: number,
+  month: number
+): { year: number; month: number } {
+  if (month === 12) {
+    return { year: year + 1, month: 1 };
+  }
+  return { year, month: month + 1 };
+}
+

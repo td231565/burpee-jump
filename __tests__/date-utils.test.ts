@@ -2,8 +2,13 @@ import {
   formatLocalDateKey,
   formatMonthDay,
   formatYearMonth,
+  formatDetailDate,
+  formatCompletedDateTime,
   getMonthDateRange,
   isSameLocalDate,
+  generateMonthGrid,
+  getPreviousMonth,
+  getNextMonth,
 } from '../src/features/calendar/date-utils';
 
 describe('日期純函式 (Seam 1)', () => {
@@ -20,6 +25,11 @@ describe('日期純函式 (Seam 1)', () => {
   it('格式化月日顯示為「M 月 D 日」', () => {
     const testDate = new Date(2026, 8, 9);
     expect(formatMonthDay(testDate)).toBe('9 月 9 日');
+  });
+
+  it('格式化年月日字串為「YYYY 年 M 月 D 日」', () => {
+    expect(formatDetailDate('2026-09-09')).toBe('2026 年 9 月 9 日');
+    expect(formatDetailDate('2024-02-29')).toBe('2024 年 2 月 29 日');
   });
 
   it('判斷是否為同一個當地日', () => {
@@ -45,4 +55,118 @@ describe('日期純函式 (Seam 1)', () => {
     expect(rangeFebCommon.startDate).toBe('2026-02-01');
     expect(rangeFebCommon.endDate).toBe('2026-02-28');
   });
+
+  describe('generateMonthGrid (Seam 1)', () => {
+    it('產生固定 42 格，星期一為每週第一天 (2026 年 9 月)', () => {
+      const today = new Date(2026, 8, 9); // 2026-09-09
+      const grid = generateMonthGrid(2026, 9, today);
+
+      expect(grid).toHaveLength(42);
+
+      // 9 月 1 日為週二，第 1 格為 8 月 31 日 (週一，非本月補位)
+      expect(grid[0]).toEqual({
+        localDate: '2026-08-31',
+        day: 31,
+        isCurrentMonth: false,
+        isToday: false,
+        isPast: true,
+        isFuture: false,
+      });
+
+      // 第 2 格為 9 月 1 日 (本月第一天)
+      expect(grid[1]).toEqual({
+        localDate: '2026-09-01',
+        day: 1,
+        isCurrentMonth: true,
+        isToday: false,
+        isPast: true,
+        isFuture: false,
+      });
+
+      // 9 月 9 日 (今天)
+      const todayCell = grid.find((cell) => cell.localDate === '2026-09-09');
+      expect(todayCell).toEqual({
+        localDate: '2026-09-09',
+        day: 9,
+        isCurrentMonth: true,
+        isToday: true,
+        isPast: false,
+        isFuture: false,
+      });
+
+      // 9 月 10 日 (未來)
+      const futureCell = grid.find((cell) => cell.localDate === '2026-09-10');
+      expect(futureCell?.isFuture).toBe(true);
+      expect(futureCell?.isPast).toBe(false);
+
+      // 最後一格 (第 42 格) 為 10 月 11 日 (非本月補位)
+      expect(grid[41]).toEqual({
+        localDate: '2026-10-11',
+        day: 11,
+        isCurrentMonth: false,
+        isToday: false,
+        isPast: false,
+        isFuture: true,
+      });
+    });
+
+    it('1 號為週一的情形 (2026 年 6 月，前面不需補上月)', () => {
+      const today = new Date(2026, 5, 15);
+      const grid = generateMonthGrid(2026, 6, today);
+      expect(grid).toHaveLength(42);
+      expect(grid[0].localDate).toBe('2026-06-01');
+      expect(grid[0].isCurrentMonth).toBe(true);
+    });
+
+    it('1 號為週日的情形 (2026 年 11 月，前面需補 6 天)', () => {
+      const today = new Date(2026, 10, 15);
+      const grid = generateMonthGrid(2026, 11, today);
+      expect(grid).toHaveLength(42);
+      expect(grid[0].localDate).toBe('2026-10-26'); // 週一
+      expect(grid[5].localDate).toBe('2026-10-31'); // 週六
+      expect(grid[6].localDate).toBe('2026-11-01'); // 週日
+      expect(grid[6].isCurrentMonth).toBe(true);
+    });
+
+    it('閏年二月 (2024 年 2 月，29 天)', () => {
+      const today = new Date(2024, 1, 10);
+      const grid = generateMonthGrid(2024, 2, today);
+      expect(grid).toHaveLength(42);
+      const feb29 = grid.find((cell) => cell.localDate === '2024-02-29');
+      expect(feb29).toBeDefined();
+      expect(feb29?.isCurrentMonth).toBe(true);
+    });
+  });
+
+  describe('月份前後切換純函式 (Seam 1)', () => {
+    it('正常切換上一月與下一月', () => {
+      expect(getPreviousMonth(2026, 9)).toEqual({ year: 2026, month: 8 });
+      expect(getNextMonth(2026, 9)).toEqual({ year: 2026, month: 10 });
+    });
+
+    it('跨年切換：1 月切上一月為前一年 12 月；12 月切下一月為次年 1 月', () => {
+      expect(getPreviousMonth(2026, 1)).toEqual({ year: 2025, month: 12 });
+      expect(getNextMonth(2026, 12)).toEqual({ year: 2027, month: 1 });
+    });
+  });
+
+  describe('formatCompletedDateTime 純函式 (Seam 1)', () => {
+    it('以 zh-TW 12 小時制格式化 UTC 時間並標示「目前時區」', () => {
+      // 06:30 UTC 轉 Asia/Taipei 為 14:30 (下午 2:30)
+      const formattedAfternoon = formatCompletedDateTime(
+        '2026-09-09T06:30:00.000Z',
+        'Asia/Taipei'
+      );
+      expect(formattedAfternoon).toBe('2026 年 9 月 9 日 下午 2:30（目前時區）');
+
+      // 01:05 UTC 轉 Asia/Taipei 為 09:05 (上午 9:05)
+      const formattedMorning = formatCompletedDateTime(
+        '2026-09-09T01:05:00.000Z',
+        'Asia/Taipei'
+      );
+      expect(formattedMorning).toBe('2026 年 9 月 9 日 上午 9:05（目前時區）');
+    });
+  });
 });
+
+

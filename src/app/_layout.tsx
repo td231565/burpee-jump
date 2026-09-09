@@ -9,6 +9,12 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="workout" />
         <Stack.Screen
+          name="day"
+          options={{
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
           name="audio-test"
           options={{
             headerShown: true,
