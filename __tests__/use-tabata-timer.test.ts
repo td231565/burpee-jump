@@ -63,6 +63,49 @@ describe('useTabataTimer Hook (Seam 2 & 4)', () => {
     expect(mockActivateKeepAwake).toHaveBeenCalled();
   });
 
+  it('午夜前按下「開始」但準備倒數跨日，仍使用按鈕當下日期；跨午夜完成仍歸屬於開始日', () => {
+    // 設定系統時間為 2026-01-31 23:59:58 (離跨日剩 2 秒)
+    jest.setSystemTime(new Date(2026, 0, 31, 23, 59, 58));
+
+    const { result } = renderHook(() => useTabataTimer({ preferences: defaultPrefs }));
+
+    act(() => {
+      result.current.start();
+    });
+
+    // 鎖定日期為開始當下的當地日
+    expect(result.current.lockedLocalDate).toBe('2026-01-31');
+
+    // 快轉完整 113.5 秒 (時間進入 2026-02-01)
+    act(() => {
+      jest.advanceTimersByTime(113500);
+    });
+
+    expect(result.current.status).toBe('saving');
+    // 完成紀錄的歸屬日仍為開始日 2026-01-31
+    expect(result.current.saveRecord?.localDate).toBe('2026-01-31');
+  });
+
+  it('進入畫面後跨日才按下「開始」，使用按鈕當下的新當地日期', () => {
+    // 進入畫面時為 2026-01-31 23:59:50
+    jest.setSystemTime(new Date(2026, 0, 31, 23, 59, 50));
+
+    const { result } = renderHook(() => useTabataTimer({ preferences: defaultPrefs }));
+
+    // 停留在 ready 狀態，未按開始，時間前進 15 秒跨入 2026-02-01 00:00:05
+    act(() => {
+      jest.advanceTimersByTime(15000);
+    });
+
+    // 跨日後才按開始
+    act(() => {
+      result.current.start();
+    });
+
+    // 鎖定新日期 2026-02-01
+    expect(result.current.lockedLocalDate).toBe('2026-02-01');
+  });
+
   it('在 ready 或 preparing 狀態取消不需確認，直接進入 cancelled', () => {
     const { result } = renderHook(() => useTabataTimer({ preferences: defaultPrefs }));
 
@@ -132,7 +175,7 @@ describe('useTabataTimer Hook (Seam 2 & 4)', () => {
     expect(mockActivateKeepAwake).toHaveBeenCalled();
   });
 
-  it('完整 113 秒後進入 completed 狀態', () => {
+  it('完整 113 秒後進入 saving 狀態，呼叫 markSaveSuccess 後進入 completed', () => {
     const { result } = renderHook(() => useTabataTimer({ preferences: defaultPrefs }));
 
     act(() => {
@@ -144,8 +187,15 @@ describe('useTabataTimer Hook (Seam 2 & 4)', () => {
       jest.advanceTimersByTime(113500);
     });
 
-    expect(result.current.status).toBe('completed');
+    expect(result.current.status).toBe('saving');
+    expect(result.current.saveRecord?.localDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(result.current.snapshot.isFinished).toBe(true);
     expect(mockDeactivateKeepAwake).toHaveBeenCalled();
+
+    act(() => {
+      result.current.markSaveSuccess();
+    });
+
+    expect(result.current.status).toBe('completed');
   });
 });

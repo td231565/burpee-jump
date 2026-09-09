@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import { IconButton } from '../components/ui/icon-button';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { getAudioPreferences, type AudioPreferences } from '../data/audio-preferences';
+import { insertCompletion } from '../data/completions';
 import { useTabataTimer } from '../features/workout/use-tabata-timer';
 import { TimerDisplay } from '../features/workout/components/timer-display';
 import { colors, radius, spacing } from '../theme/tokens';
@@ -23,6 +24,7 @@ export default function WorkoutScreen() {
   });
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,13 +42,33 @@ export default function WorkoutScreen() {
 
   const timer = useTabataTimer({ preferences });
 
+  // 自動保存
+  const isSavingRef = useRef(false);
+  const { status, saveRecord, markSaveSuccess, markSaveError } = timer;
+  useEffect(() => {
+    if (status === 'saving' && saveRecord && db && !isSavingRef.current) {
+      isSavingRef.current = true;
+      insertCompletion(db, saveRecord.localDate, saveRecord.completedAt)
+        .then(() => {
+          isSavingRef.current = false;
+          markSaveSuccess();
+        })
+        .catch(() => {
+          isSavingRef.current = false;
+          markSaveError();
+        });
+    }
+  }, [status, saveRecord, db, markSaveSuccess, markSaveError]);
+
   const handleBackPress = () => {
     if (timer.status === 'ready' || timer.status === 'preparing') {
       timer.cancel();
       router.back();
     } else if (timer.status === 'running' || timer.status === 'paused') {
       setShowConfirm(true);
-    } else {
+    } else if (timer.status === 'saveError') {
+      setShowDiscardConfirm(true);
+    } else if (timer.status === 'completed') {
       router.back();
     }
   };
@@ -54,6 +76,12 @@ export default function WorkoutScreen() {
   const handleConfirmCancel = () => {
     setShowConfirm(false);
     timer.cancel();
+    router.back();
+  };
+
+  const handleConfirmDiscard = () => {
+    setShowDiscardConfirm(false);
+    timer.discardSave();
     router.back();
   };
 
@@ -116,6 +144,25 @@ export default function WorkoutScreen() {
             timer.status === 'running' ||
             timer.status === 'paused') && (
             <TimerDisplay status={timer.status} snapshot={timer.snapshot} />
+          )}
+
+          {timer.status === 'saving' && (
+            <View style={styles.savingCard}>
+              <AppText variant="headline" style={styles.savingTitle}>
+                正在保存紀錄...
+              </AppText>
+            </View>
+          )}
+
+          {timer.status === 'saveError' && (
+            <View style={styles.errorCard}>
+              <AppText variant="headline" style={styles.errorTitle}>
+                儲存失敗
+              </AppText>
+              <AppText variant="body" style={styles.errorMessage}>
+                無法寫入訓練紀錄，請重新儲存或放棄本次紀錄
+              </AppText>
+            </View>
           )}
 
           {timer.status === 'completed' && (
@@ -196,6 +243,27 @@ export default function WorkoutScreen() {
             </View>
           )}
 
+          {timer.status === 'saveError' && (
+            <View style={styles.buttonRow}>
+              <Button
+                variant="primary"
+                onPress={timer.retrySave}
+                accessibilityLabel="重新儲存"
+                style={styles.halfButton}
+              >
+                重新儲存
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => setShowDiscardConfirm(true)}
+                accessibilityLabel="放棄紀錄"
+                style={styles.halfButton}
+              >
+                放棄紀錄
+              </Button>
+            </View>
+          )}
+
           {timer.status === 'completed' && (
             <Button
               variant="primary"
@@ -217,6 +285,17 @@ export default function WorkoutScreen() {
           cancelText="繼續訓練"
           onConfirm={handleConfirmCancel}
           onCancel={() => setShowConfirm(false)}
+        />
+
+        {/* 放棄紀錄確認對話框 */}
+        <ConfirmDialog
+          visible={showDiscardConfirm}
+          title="確定要放棄紀錄嗎？"
+          message="離開後本次完成不會被記錄"
+          confirmText="放棄並離開"
+          cancelText="繼續儲存"
+          onConfirm={handleConfirmDiscard}
+          onCancel={() => setShowDiscardConfirm(false)}
         />
       </View>
     </SafeAreaView>
@@ -291,6 +370,27 @@ const styles = StyleSheet.create({
   },
   degradedText: {
     color: colors.error,
+    textAlign: 'center',
+  },
+  savingCard: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  savingTitle: {
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  errorCard: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  errorTitle: {
+    color: colors.error,
+    marginBottom: spacing.base,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    color: colors.muted,
     textAlign: 'center',
   },
   completedCard: {

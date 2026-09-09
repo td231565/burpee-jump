@@ -35,14 +35,13 @@ export default function HomeScreen() {
     music_enabled: true,
   });
 
-  const today = new Date();
-  const todayKey = formatLocalDateKey(today);
+  const [todayDate, setTodayDate] = useState(() => new Date());
 
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
+  const [viewYear, setViewYear] = useState(() => todayDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => todayDate.getMonth() + 1);
 
   const isCurrentMonthView =
-    viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
+    viewYear === todayDate.getFullYear() && viewMonth === todayDate.getMonth() + 1;
 
   const currentMonthText = formatYearMonth(new Date(viewYear, viewMonth - 1, 1));
 
@@ -59,8 +58,10 @@ export default function HomeScreen() {
   };
 
   const handleBackToToday = () => {
-    setViewYear(today.getFullYear());
-    setViewMonth(today.getMonth() + 1);
+    const now = new Date();
+    setTodayDate(now);
+    setViewYear(now.getFullYear());
+    setViewMonth(now.getMonth() + 1);
   };
 
   const handleSelectDate = (date: string) => {
@@ -87,10 +88,19 @@ export default function HomeScreen() {
 
       async function refreshData() {
         if (!db) return;
+        const now = new Date();
+        const currentKey = formatLocalDateKey(now);
+        setTodayDate((prev) => {
+          if (formatLocalDateKey(prev) !== currentKey) {
+            return now;
+          }
+          return prev;
+        });
+
         try {
           const { startDate, endDate } = getMonthDateRange(viewYear, viewMonth);
           const [todayRecord, monthRecords, prefs] = await Promise.all([
-            getCompletionByDate(db, todayKey),
+            getCompletionByDate(db, currentKey),
             getCompletionsForMonth(db, startDate, endDate),
             getAudioPreferences(db),
           ]);
@@ -114,7 +124,7 @@ export default function HomeScreen() {
       return () => {
         isMounted = false;
       };
-    }, [db, todayKey, viewYear, viewMonth])
+    }, [db, viewYear, viewMonth])
   );
 
   return (
@@ -162,7 +172,7 @@ export default function HomeScreen() {
           <MonthCalendar
             year={viewYear}
             month={viewMonth}
-            today={today}
+            today={todayDate}
             completionsMap={completionsMap}
             onSelectDate={handleSelectDate}
           />

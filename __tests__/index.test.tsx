@@ -1,3 +1,4 @@
+import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import HomeScreen from '../src/app/index';
 
@@ -11,7 +12,11 @@ jest.mock('expo-router', () => ({
   }),
   useFocusEffect: (cb: any) => {
     focusCallback = cb;
-    cb();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useEffect } = require('react');
+    useEffect(() => {
+      return cb();
+    }, [cb]);
   },
 }));
 
@@ -215,6 +220,44 @@ describe('首頁日曆 (Phase 2 Tracer Slice)', () => {
         name: '今天完成了',
       });
       expect(completedButton).toBeTruthy();
+    });
+
+    it('跨午夜與跨月完成後（如 1/31 跨至 2/1）返回首頁，首頁停在 1 月並顯示 1/31 完成，主要操作為回到今天', async () => {
+      // 初始為 2026-01-31 23:59:00
+      jest.setSystemTime(new Date(2026, 0, 31, 23, 59, 0));
+      render(<HomeScreen />);
+
+      expect(screen.getByText('2026 年 1 月')).toBeTruthy();
+      expect(screen.getByRole('button', { name: '開始今天的 2 分鐘' })).toBeTruthy();
+
+      // 模擬跨越午夜進入 2026-02-01 00:01:00，完成訓練並寫入 2026-01-31 完成紀錄
+      jest.setSystemTime(new Date(2026, 1, 1, 0, 1, 0));
+      mockGetFirstAsync.mockResolvedValue(null); // 2/1 今日尚未完成
+      mockGetAllAsync.mockResolvedValue([
+        { local_date: '2026-01-31', completed_at: '2026-01-31T16:01:00.000Z' },
+      ]);
+
+      // workout 返回 index 觸發 focus
+      expect(focusCallback).not.toBeNull();
+      act(() => {
+        focusCallback?.();
+      });
+
+      // 月曆仍停留於 2026 年 1 月，且 31 日顯示為已完成
+      expect(screen.getByText('2026 年 1 月')).toBeTruthy();
+      const jan31Cell = await screen.findByRole('button', { name: '31 日 已完成' });
+      expect(jan31Cell).toBeTruthy();
+
+      // 因為現在真實日期是 2 月，檢視月份 (1 月) 非當前月，主要操作顯示為「回到今天」，不直接提供訓練按鈕
+      const backToTodayButton = screen.getByRole('button', { name: '回到今天' });
+      expect(backToTodayButton).toBeTruthy();
+      expect(screen.queryByRole('button', { name: '開始今天的 2 分鐘' })).toBeNull();
+
+      // 點擊「回到今天」切換至 2026 年 2 月
+      fireEvent.press(backToTodayButton);
+      expect(screen.getByText('2026 年 2 月')).toBeTruthy();
+      // 2 月 1 日為今天且尚未完成，顯示「開始今天的 2 分鐘」
+      expect(screen.getByRole('button', { name: '開始今天的 2 分鐘' })).toBeTruthy();
     });
   });
 

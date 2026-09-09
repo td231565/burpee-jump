@@ -12,10 +12,11 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockGetFirstAsync = jest.fn();
+const mockRunAsync = jest.fn().mockResolvedValue({ lastInsertRowId: 1, changes: 1 });
 jest.mock('expo-sqlite', () => ({
   useSQLiteContext: () => ({
     getFirstAsync: (...args: any[]) => mockGetFirstAsync(...args),
-    runAsync: jest.fn().mockResolvedValue({ lastInsertRowId: 1, changes: 1 }),
+    runAsync: (...args: any[]) => mockRunAsync(...args),
   }),
 }));
 
@@ -25,23 +26,27 @@ jest.mock('expo-keep-awake', () => ({
   deactivateKeepAwake: jest.fn(),
 }));
 
-// Mock expo-audio
-jest.mock('expo-audio', () => ({
-  createAudioPlayer: jest.fn(() => ({
-    loop: false,
-    play: jest.fn(),
-    pause: jest.fn(),
-    seekTo: jest.fn().mockResolvedValue(undefined),
-    addListener: jest.fn(() => ({ remove: jest.fn() })),
-    release: jest.fn(),
-  })),
-  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-  setIsAudioActiveAsync: jest.fn().mockResolvedValue(undefined),
-}));
+// Mock audio-service
+jest.mock('../src/features/workout/audio-service', () => {
+  return {
+    TabataAudioService: jest.fn().mockImplementation(() => ({
+      initialize: jest.fn().mockResolvedValue(true),
+      playBgm: jest.fn().mockResolvedValue(undefined),
+      playVoice: jest.fn().mockResolvedValue(undefined),
+      playCue: jest.fn().mockResolvedValue(undefined),
+      pause: jest.fn().mockResolvedValue(undefined),
+      resume: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      isDegraded: false,
+    })),
+  };
+});
 
 describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    jest.useFakeTimers({
+      doNotFake: ['setTimeout', 'setImmediate'],
+    });
     mockBack.mockClear();
     mockPush.mockClear();
     mockGetFirstAsync.mockResolvedValue({
@@ -138,5 +143,133 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     fireEvent.press(getByRole('button', { name: '繼續' }));
     expect(queryByText('已暫停')).toBeNull();
     expect(getByRole('button', { name: '暫停' })).toBeTruthy();
+  });
+
+  it('正常完成後寫入鎖定的開始日期與實際 UTC 完成時間，寫入成功才顯示完成並可返回日曆', async () => {
+    mockRunAsync.mockClear();
+    mockRunAsync.mockResolvedValue({ lastInsertRowId: 1, changes: 1 });
+
+    const { getByRole, getAllByRole, getByText } = render(<WorkoutScreen />);
+
+    fireEvent.press(getByRole('button', { name: '開始' }));
+
+    act(() => {
+      jest.advanceTimersByTime(113500);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(mockRunAsync).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO daily_completions'),
+      expect.arrayContaining([expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.any(String)])
+    );
+
+    // 寫入成功後顯示訓練完成與返回日曆按鈕
+    expect(getByText('訓練完成！')).toBeTruthy();
+    const backButtons = getAllByRole('button', { name: '返回日曆' });
+    expect(backButtons.length).toBeGreaterThanOrEqual(1);
+
+    // 點擊返回日曆按鈕
+    fireEvent.press(backButtons[backButtons.length - 1]);
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('寫入失敗時停在待儲存狀態，不顯示虛假成功，並提供重新儲存與放棄紀錄按鈕', async () => {
+    mockRunAsync.mockClear();
+    mockRunAsync.mockRejectedValueOnce(new Error('Database write failure'));
+
+    const { getByRole, getByText, queryByText } = render(<WorkoutScreen />);
+
+    fireEvent.press(getByRole('button', { name: '開始' }));
+
+    act(() => {
+      jest.advanceTimersByTime(113500);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 不得顯示完成訊息
+    expect(queryByText('訓練完成！')).toBeNull();
+
+    // 顯示錯誤說明
+    expect(getByText('儲存失敗')).toBeTruthy();
+
+    // 提供「重新儲存」與「放棄紀錄」按鈕
+    expect(getByRole('button', { name: '重新儲存' })).toBeTruthy();
+    expect(getByRole('button', { name: '放棄紀錄' })).toBeTruthy();
+  });
+
+  it('手動重試成功且維持同一筆完成時間，成功後進入完成狀態', async () => {
+    mockRunAsync.mockClear();
+    // 第一次失敗，第二次成功
+    mockRunAsync
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({ lastInsertRowId: 1, changes: 1 });
+
+    const { getByRole, getByText, queryByText } = render(<WorkoutScreen />);
+
+    fireEvent.press(getByRole('button', { name: '開始' }));
+
+    act(() => {
+      jest.advanceTimersByTime(113500);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(getByText('儲存失敗')).toBeTruthy();
+    expect(mockRunAsync).toHaveBeenCalledTimes(1);
+    const firstCallArgs = mockRunAsync.mock.calls[0];
+
+    // 點擊重新儲存
+    fireEvent.press(getByRole('button', { name: '重新儲存' }));
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 再次呼叫 runAsync，且參數（localDate 與 completedAt）完全一致
+    expect(mockRunAsync).toHaveBeenCalledTimes(2);
+    expect(mockRunAsync.mock.calls[1]).toEqual(firstCallArgs);
+
+    // 儲存成功，進入完成狀態
+    expect(getByText('訓練完成！')).toBeTruthy();
+    expect(queryByText('儲存失敗')).toBeNull();
+  });
+
+  it('寫入失敗時點擊放棄紀錄或返回需先確認，取消確認留在原畫面，確認放棄後清空記憶體並返回日曆且不保存紀錄', async () => {
+    mockRunAsync.mockClear();
+    mockRunAsync.mockRejectedValue(new Error('Persistent error'));
+
+    const { getByRole, getByText, queryByText } = render(<WorkoutScreen />);
+
+    fireEvent.press(getByRole('button', { name: '開始' }));
+
+    act(() => {
+      jest.advanceTimersByTime(113500);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(getByText('儲存失敗')).toBeTruthy();
+
+    // 點擊放棄紀錄按鈕
+    fireEvent.press(getByRole('button', { name: '放棄紀錄' }));
+
+    // 顯示確認對話框
+    expect(getByText('確定要放棄紀錄嗎？')).toBeTruthy();
+    expect(getByText('離開後本次完成不會被記錄')).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // 點擊繼續儲存取消對話框
+    fireEvent.press(getByRole('button', { name: '繼續儲存' }));
+    expect(queryByText('確定要放棄紀錄嗎？')).toBeNull();
+    expect(getByText('儲存失敗')).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+
+    // 點擊返回日曆按鈕（標頭）亦觸發相同放棄確認
+    fireEvent.press(getByRole('button', { name: '返回日曆' }));
+    expect(getByText('確定要放棄紀錄嗎？')).toBeTruthy();
+
+    // 確認放棄並離開
+    fireEvent.press(getByRole('button', { name: '放棄並離開' }));
+    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 });

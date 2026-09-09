@@ -16,14 +16,22 @@ export type WorkoutStatus =
   | 'preparing'
   | 'running'
   | 'paused'
+  | 'saving'
+  | 'saveError'
   | 'completed'
   | 'cancelled';
+
+export interface SaveRecord {
+  localDate: string;
+  completedAt: string;
+}
 
 interface WorkoutState {
   status: WorkoutStatus;
   lockedLocalDate: string | null;
   snapshot: TabataSnapshot;
   isAudioDegraded: boolean;
+  saveRecord: SaveRecord | null;
 }
 
 type WorkoutAction =
@@ -31,7 +39,11 @@ type WorkoutAction =
   | { type: 'TICK'; snapshot: TabataSnapshot; status?: WorkoutStatus }
   | { type: 'PAUSE' }
   | { type: 'RESUME' }
-  | { type: 'COMPLETE' }
+  | { type: 'FINISH'; completedAt: string }
+  | { type: 'SAVE_SUCCESS' }
+  | { type: 'SAVE_ERROR' }
+  | { type: 'RETRY_SAVE' }
+  | { type: 'DISCARD' }
   | { type: 'CANCEL' }
   | { type: 'SET_AUDIO_DEGRADED'; degraded: boolean };
 
@@ -42,6 +54,7 @@ const initialState: WorkoutState = {
   lockedLocalDate: null,
   snapshot: initialSnapshot,
   isAudioDegraded: false,
+  saveRecord: null,
 };
 
 function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutState {
@@ -51,6 +64,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         ...state,
         status: 'preparing',
         lockedLocalDate: action.localDate,
+        saveRecord: null,
         snapshot: deriveTabataSnapshot(0),
       };
     case 'TICK':
@@ -71,16 +85,37 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         ...state,
         status: state.snapshot.phase === 'preparing' ? 'preparing' : 'running',
       };
-    case 'COMPLETE':
+    case 'FINISH':
+      return {
+        ...state,
+        status: 'saving',
+        saveRecord: state.lockedLocalDate
+          ? { localDate: state.lockedLocalDate, completedAt: action.completedAt }
+          : null,
+        snapshot: deriveTabataSnapshot(TOTAL_FLOW_DURATION_MS),
+      };
+    case 'SAVE_SUCCESS':
       return {
         ...state,
         status: 'completed',
-        snapshot: deriveTabataSnapshot(TOTAL_FLOW_DURATION_MS),
       };
+    case 'SAVE_ERROR':
+      return {
+        ...state,
+        status: 'saveError',
+      };
+    case 'RETRY_SAVE':
+      if (state.status !== 'saveError') return state;
+      return {
+        ...state,
+        status: 'saving',
+      };
+    case 'DISCARD':
     case 'CANCEL':
       return {
         ...state,
         status: 'cancelled',
+        saveRecord: null,
       };
     case 'SET_AUDIO_DEGRADED':
       return {
@@ -149,6 +184,8 @@ export function useTabataTimer({ preferences }: UseTabataTimerProps) {
           }
           dispatch({ type: 'PAUSE' });
           audioServiceRef.current?.pause();
+        } else if (statusRef.current === 'saveError') {
+          audioServiceRef.current?.pause();
         }
       }
     });
@@ -190,7 +227,8 @@ export function useTabataTimer({ preferences }: UseTabataTimerProps) {
       if (snapshot.isFinished) {
         accumulatedElapsedRef.current = TOTAL_FLOW_DURATION_MS;
         sessionStartTimeRef.current = null;
-        dispatch({ type: 'COMPLETE' });
+        const completedAt = new Date().toISOString();
+        dispatch({ type: 'FINISH', completedAt });
         clearInterval(intervalId);
         return;
       }
@@ -237,14 +275,37 @@ export function useTabataTimer({ preferences }: UseTabataTimerProps) {
     audioServiceRef.current?.release();
   }, []);
 
+  const markSaveSuccess = useCallback(() => {
+    dispatch({ type: 'SAVE_SUCCESS' });
+  }, []);
+
+  const markSaveError = useCallback(() => {
+    dispatch({ type: 'SAVE_ERROR' });
+  }, []);
+
+  const retrySave = useCallback(() => {
+    dispatch({ type: 'RETRY_SAVE' });
+  }, []);
+
+  const discardSave = useCallback(() => {
+    sessionStartTimeRef.current = null;
+    dispatch({ type: 'DISCARD' });
+    audioServiceRef.current?.release();
+  }, []);
+
   return {
     status: state.status,
     lockedLocalDate: state.lockedLocalDate,
     snapshot: state.snapshot,
     isAudioDegraded: state.isAudioDegraded,
+    saveRecord: state.saveRecord,
     start,
     pause,
     resume,
     cancel,
+    markSaveSuccess,
+    markSaveError,
+    retrySave,
+    discardSave,
   };
 }
