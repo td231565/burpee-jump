@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T09:09:41+08:00",
+  "title": "Design System: BurpeeJump",
+  "extensions": {
+    "colorMeta": {
+      "warm-canvas": {
+        "role": "neutral",
+        "displayName": "暖紙畫布",
+        "canonical": "#FAF9F6",
+        "tonalRamp": ["#292824", "#484640", "#68665E", "#89867C", "#ABA89D", "#CCCAC1", "#E7E5DE", "#FAF9F6"]
+      },
+      "solid-surface": {
+        "role": "neutral",
+        "displayName": "實心白表面",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#262626", "#454545", "#666666", "#878787", "#A9A9A9", "#CACACA", "#E5E5E5", "#FFFFFF"]
+      },
+      "subtle-surface": {
+        "role": "neutral",
+        "displayName": "微妙淺灰表面",
+        "canonical": "#F1F5F9",
+        "tonalRamp": ["#202932", "#394754", "#536677", "#6E869A", "#8CA7BC", "#ACC8DB", "#D1E0EB", "#F1F5F9"]
+      },
+      "deep-slate-ink": {
+        "role": "neutral",
+        "displayName": "深板岩墨色",
+        "canonical": "#1E293B",
+        "tonalRamp": ["#111722", "#1E293B", "#34445B", "#506078", "#718198", "#98A5B6", "#C4CBD5", "#EFF1F4"]
+      },
+      "muted-slate": {
+        "role": "neutral",
+        "displayName": "霧板岩",
+        "canonical": "#64748B",
+        "tonalRamp": ["#17202D", "#2B394B", "#45566C", "#64748B", "#8291A6", "#A4AFBE", "#CAD0D9", "#F0F2F5"]
+      },
+      "sky-primary": {
+        "role": "primary",
+        "displayName": "晴空行動藍",
+        "canonical": "#0284C7",
+        "tonalRamp": ["#06263A", "#064566", "#086694", "#0284C7", "#27A5E5", "#6AC5F0", "#AFE1F8", "#E8F7FD"]
+      },
+      "sky-soft": {
+        "role": "primary",
+        "displayName": "晴空柔藍",
+        "canonical": "#E0F2FE",
+        "tonalRamp": ["#142B3A", "#29506A", "#487897", "#70A1BF", "#9CC7DE", "#C1E1F1", "#E0F2FE", "#F3FAFF"]
+      },
+      "sky-border": {
+        "role": "primary",
+        "displayName": "薄霧藍邊",
+        "canonical": "#BAE6FD",
+        "tonalRamp": ["#102C3C", "#24536D", "#417D9B", "#68A7C7", "#91CCE7", "#BAE6FD", "#D9F1FD", "#F2FAFE"]
+      },
+      "exercise-rose": {
+        "role": "secondary",
+        "displayName": "運動莓果紅",
+        "canonical": "#E11D48",
+        "tonalRamp": ["#3B0A16", "#6B1028", "#9C1738", "#C91B43", "#E94B6B", "#F4879D", "#FABFCC", "#FDECEF"]
+      },
+      "exercise-rose-soft": {
+        "role": "secondary",
+        "displayName": "運動莓果柔粉",
+        "canonical": "#FFE4E6",
+        "tonalRamp": ["#3B2023", "#6B3C42", "#985B63", "#C57E86", "#E5A6AC", "#F5C8CC", "#FFE4E6", "#FFF5F6"]
+      },
+      "morning-amber": {
+        "role": "tertiary",
+        "displayName": "晨光琥珀",
+        "canonical": "#D97706",
+        "tonalRamp": ["#342006", "#603B05", "#8C5605", "#B86B05", "#D97706", "#EDA442", "#F6CF89", "#FCEFCF"]
+      },
+      "morning-yellow-soft": {
+        "role": "tertiary",
+        "displayName": "晨光柔黃",
+        "canonical": "#FEF9C3",
+        "tonalRamp": ["#37320E", "#655C1A", "#91852B", "#BEB146", "#DED46F", "#F1E99A", "#FEF9C3", "#FFFDEE"]
+      },
+      "morning-yellow-border": {
+        "role": "tertiary",
+        "displayName": "晨光黃邊",
+        "canonical": "#FDE047",
+        "tonalRamp": ["#372D05", "#655408", "#927B0D", "#BDA316", "#E0C427", "#FDE047", "#FCEB8A", "#FFF8D5"]
+      },
+      "completion-green": {
+        "role": "tertiary",
+        "displayName": "完成嫩綠",
+        "canonical": "#16A34A",
+        "tonalRamp": ["#082B16", "#0B4E25", "#0F7335", "#169645", "#16A34A", "#58C77D", "#9BE2B2", "#E0F7E8"]
+      },
+      "completion-green-soft": {
+        "role": "tertiary",
+        "displayName": "完成柔綠",
+        "canonical": "#DCFCE7",
+        "tonalRamp": ["#163421", "#2B6040", "#4A8D61", "#73B783", "#9ED8AB", "#C2EDCD", "#DCFCE7", "#F2FCF5"]
+      },
+      "error-red": {
+        "role": "error",
+        "displayName": "錯誤紅",
+        "canonical": "#DC2626",
+        "tonalRamp": ["#380B0B", "#671212", "#951A1A", "#BE2020", "#DC2626", "#ED6868", "#F6AAAA", "#FDE8E8"]
+      },
+      "error-red-soft": {
+        "role": "error",
+        "displayName": "錯誤柔紅",
+        "canonical": "#FEE2E2",
+        "tonalRamp": ["#392020", "#673B3B", "#945858", "#C07979", "#DFA1A1", "#F2C5C5", "#FEE2E2", "#FFF4F4"]
+      },
+      "quiet-border": {
+        "role": "neutral",
+        "displayName": "安靜邊線",
+        "canonical": "#E2E8F0",
+        "tonalRamp": ["#202730", "#3A4654", "#556777", "#72899B", "#93AABC", "#B5C7D5", "#D2DCE5", "#F1F4F7"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "倒數 Display", "purpose": "正式倒數數字。" },
+      "hero": { "displayName": "Hero", "purpose": "階段名稱與最高層級標題。" },
+      "title": { "displayName": "Title", "purpose": "頁面及 modal 主要標題。" },
+      "headline": { "displayName": "Headline", "purpose": "主要操作與重要狀態。" },
+      "body": { "displayName": "Body", "purpose": "一般說明與規則。" },
+      "label": { "displayName": "Label", "purpose": "日期、星期與輔助標籤。" }
+    },
+    "shadows": [
+      { "name": "primary-action", "value": "0 4px 8px rgba(2,132,199,0.18)", "purpose": "只抬升單一主要按鈕；React Native Android elevation 3。" },
+      { "name": "calendar-ambient", "value": "0 2px 6px rgba(30,41,59,0.04)", "purpose": "月曆大型互動表面；React Native Android elevation 1。" },
+      { "name": "content-surface", "value": "0 4px 10px rgba(30,41,59,0.06)", "purpose": "日期詳情等單一重點表面；React Native Android elevation 2。" }
+    ],
+    "motion": [
+      { "name": "state-standard", "value": "200ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "按壓、狀態切換與簡短揭示。" },
+      { "name": "button-pressed", "value": "scale(0.98)", "purpose": "一般按鈕按壓回饋。" },
+      { "name": "icon-pressed", "value": "scale(0.94)", "purpose": "圓形 icon button 按壓回饋。" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "每個畫面的單一主要行動。",
+      "html": "<button class=\"ds-btn-primary\">開始今天的 2 分鐘</button>",
+      "css": ".ds-btn-primary { min-width: 44px; min-height: 52px; padding: 12px 24px; border: 1px solid #BAE6FD; border-radius: 18px; background: #0284C7; color: #FFFFFF; font: 600 18px system-ui,sans-serif; box-shadow: 0 4px 8px rgba(2,132,199,.18); transition: opacity 200ms cubic-bezier(.22,1,.36,1), transform 200ms cubic-bezier(.22,1,.36,1); } .ds-btn-primary:hover { opacity: .92; } .ds-btn-primary:active { opacity: .85; transform: scale(.98); } .ds-btn-primary:focus-visible { outline: 3px solid #FDE047; outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "取消、返回與次要操作。",
+      "html": "<button class=\"ds-btn-secondary\">取消訓練</button>",
+      "css": ".ds-btn-secondary { min-width: 44px; min-height: 52px; padding: 12px 24px; border: 1px solid #E2E8F0; border-radius: 18px; background: #FFFFFF; color: #1E293B; font: 500 18px system-ui,sans-serif; transition: opacity 200ms cubic-bezier(.22,1,.36,1), transform 200ms cubic-bezier(.22,1,.36,1); } .ds-btn-secondary:hover { background: #F1F5F9; } .ds-btn-secondary:active { opacity: .85; transform: scale(.98); } .ds-btn-secondary:focus-visible { outline: 3px solid #BAE6FD; outline-offset: 3px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "設定與其他低頻工具入口，固定 44 × 44px。",
+      "html": "<button class=\"ds-icon-button\" aria-label=\"設定\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.33.72.6 1 .3.27.68.4 1.1.4H21v4h-.09A1.7 1.7 0 0 0 19.4 15Z\"/></svg></button>",
+      "css": ".ds-icon-button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 999px; background: #F1F5F9; color: #1E293B; transition: opacity 200ms cubic-bezier(.22,1,.36,1), transform 200ms cubic-bezier(.22,1,.36,1); } .ds-icon-button:hover { background: #E2E8F0; } .ds-icon-button:active { opacity: .7; transform: scale(.94); } .ds-icon-button:focus-visible { outline: 3px solid #BAE6FD; outline-offset: 3px; }"
+    },
+    {
+      "name": "Calendar Day",
+      "kind": "custom",
+      "refersTo": "calendar-surface",
+      "description": "同時以色彩、邊線、文字與勾號呈現日期狀態。",
+      "html": "<button class=\"ds-calendar-day ds-calendar-day-complete\"><span>10</span><b>✓</b></button>",
+      "css": ".ds-calendar-day { width: 44px; height: 44px; display: grid; place-content: center; border: 0; border-radius: 12px; background: transparent; color: #1E293B; font: 500 12px system-ui,sans-serif; } .ds-calendar-day b { font-size: 10px; line-height: 12px; } .ds-calendar-day-complete { border: 1.5px solid #16A34A; background: #DCFCE7; color: #16A34A; font-weight: 700; } .ds-calendar-day:hover { opacity: .85; } .ds-calendar-day:active { transform: scale(.95); } .ds-calendar-day:focus-visible { outline: 3px solid #BAE6FD; outline-offset: 2px; }"
+    },
+    {
+      "name": "Workout Timer",
+      "kind": "custom",
+      "refersTo": "timer-work",
+      "description": "運動階段的大字、遠距可讀計時表面。",
+      "html": "<section class=\"ds-timer-work\"><small>第 1 / 4 組</small><h2>運動</h2><strong>20</strong></section>",
+      "css": ".ds-timer-work { width: 320px; aspect-ratio: 1; display: grid; place-content: center; justify-items: center; padding: 24px; border: 2px solid #E11D48; border-radius: 24px; background: #FFE4E6; color: #E11D48; font-family: system-ui,sans-serif; } .ds-timer-work small { font-size: 18px; font-weight: 600; } .ds-timer-work h2 { margin: 4px 0 16px; font-size: 32px; } .ds-timer-work strong { font-size: 88px; line-height: 96px; font-weight: 800; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "晨光自然小徑",
+    "overview": "使用者可能在早晨、午休或下班後的居家空間打開手機，準備完成一段短而有強度的運動。介面把每天兩分鐘想像成走過一小段晨光自然小徑，以明亮暖白為環境光，搭配天空、草地邊緣、葉片、石頭與小花等低對比線索；果凍感保留在圓角表面與按壓觸感，不再是整個世界觀。視覺設計服務於每日兩分鐘的可靠流程。日曆可以像每日抵達的小徑入口，完成時可以出現發芽、開花或日出等回饋，倒數仍必須果斷；裝飾只出現在不影響資訊辨識的留白區，運動階段則由大字、語意色與聲音共同表達。角色不是產品成立的前提，人形角色可以作為偶發陪伴，但製作成本過高時必須完整省略。核心畫面永遠保持單一主要行動，不用角色、插畫、卡片或設定選項堆疊出虛假的豐富感。",
+    "keyCharacteristics": [
+      "溫暖明亮的淺色介面，不使用純黑背景或高飽和霓虹。",
+      "天空、草地、小徑、葉片與晨光形成戶外小冒險感，不導入地圖或收集玩法。",
+      "連續大圓角、淡色實心表面、細邊框與極輕陰影形成果凍感。",
+      "淺藍、粉紅、淡黃與淺綠各自承擔明確的流程語意。",
+      "核心倒數優先於所有裝飾，距離手機一段距離仍需清楚可讀。",
+      "動效只回應操作或狀態變化，時長以 150 至 250ms 為界，不使用彈跳或裝飾性進場。"
+    ],
+    "rules": [
+      { "name": "The Quiet Artwork Rule", "body": "背景、插畫、角色與 icon 都是流程的配角。移除任何裝飾或角色後，資訊層級與操作意義不得改變。", "section": "overview" },
+      { "name": "The Semantic Color Rule", "body": "相同狀態永遠使用相同色彩角色。不得因為畫面單調而交換運動紅、休息藍、今日黃或完成綠。", "section": "colors" },
+      { "name": "The Pastel Contrast Rule", "body": "淡色只能當表面，重要文字必須使用對應的深色語意色或深板岩墨色；狀態不得只依賴顏色。", "section": "colors" },
+      { "name": "The Distance Test", "body": "正式計時畫面需在手機離使用者約一個手臂距離時，仍能分辨階段名稱、剩餘秒數與暫停狀態。", "section": "typography" },
+      { "name": "The One Family Rule", "body": "產品 UI 只使用系統無襯線字體。不得為了日系感在按鈕、日期或倒數加入手寫字、明體或裝飾字。", "section": "typography" },
+      { "name": "The Flat-by-Default Rule", "body": "表面靜止時預設平坦。若同一畫面出現三個以上有陰影的容器，表示層級已經過度設計。", "section": "elevation" },
+      { "name": "The Optional Character Rule", "body": "角色必須能零成本移除。若角色需要新增資料狀態、玩法、複雜動畫或延後發佈，立即省略角色。", "section": "components" }
+    ],
+    "dos": [
+      "Do 讓今天的主要行動始終只有一個，低頻設定退居次要入口。",
+      "Do 讓裝飾停留在留白區，並在 200% 系統字級、窄螢幕與戶外較亮環境重新檢查遮擋及對比。",
+      "Do 使用 Lucide 或另一套單一線性 icon 系統，統一 24px 基準尺寸與 2px 線寬。",
+      "Do 以文字、圖示與色彩共同表達今天、完成、運動、休息、暫停、錯誤等狀態。",
+      "Do 優先使用 SVG 或套件 icon；點陣背景需提供足夠解析度並壓縮，避免增加啟動時間。",
+      "Do 先完成不含角色的自然場景，再把原創人形角色視為可選的最後一層美術增量。",
+      "Do 保留每項第三方素材的授權證據，正式發佈前逐項複核。"
+    ],
+    "donts": [
+      "Don't 採競技健身、軍事訓練或高壓減重語氣。",
+      "Don't 以羞辱、焦慮或斷掉紀錄的罪惡感迫使使用者運動。",
+      "Don't 使用高飽和霓虹、玻璃擬態、漸層文字或過度裝飾的健身儀表板。",
+      "Don't 把設定、統計或未來功能堆進每日主要流程。",
+      "Don't 在正式倒數、日期數字或主要操作後方放置照片、紋理或高對比圖形。",
+      "Don't 使用 emoji 或文字符號充當正式 UI icon。",
+      "Don't 混合多套 icon 視覺語言，或在不同畫面用不同圖示表示同一功能。",
+      "Don't 從沒有明確逐項授權的聚合站直接下載素材，也不要使用標示為 free for personal use 的素材。",
+      "Don't 把免費素材庫中的現成圖示或插畫直接當作 BurpeeJump 商標或 App icon。",
+      "Don't 模仿皮克敏或寶可夢的可辨識角色、道具、字體、配色、捕捉或戰鬥介面；只能借鑑高層次的戶外探索氣氛。",
+      "Don't 為了角色加入收集、地圖、養成或其他目前需求沒有的玩法，也不要讓角色製作延後 MVP 發佈。",
+      "Don't 使用超過 1px 的單側彩色邊線作為卡片裝飾，不使用巢狀卡片或裝飾性 modal。"
+    ]
+  }
+}
