@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+  <title id="title">BurpeeJump 晨光自然小徑 SVG 元素樣張</title>
+  <desc id="description">柔和幾何風格的太陽、草地、葉子、石頭、小花，以及元素組成的自然小徑場景。</desc>
+
+  <rect width="1200" height="900" rx="36" fill="#FAF9F6"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#1E293B">
+    <text x="72" y="82" font-size="32" font-weight="700">晨光自然小徑</text>
+    <text x="72" y="116" font-size="17" fill="#64748B">SVG 元素樣張 v1 · 柔和幾何輪廓，保留自然物件的辨識度</text>
+  </g>
+
+  <path d="M72 150H1128" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Sun -->
+  <g transform="translate(158 230)">
+    <g stroke="#D8AE4B" stroke-width="9" stroke-linecap="round">
+      <path d="M0 -82V-112"/>
+      <path d="M0 82V112"/>
+      <path d="M82 0H112"/>
+      <path d="M-82 0H-112"/>
+      <path d="M58 -58L79 -79"/>
+      <path d="M58 58L79 79"/>
+      <path d="M-58 58L-79 79"/>
+      <path d="M-58 -58L-79 -79"/>
+    </g>
+    <circle r="65" fill="#F1D997"/>
+    <path d="M-30 -17C-11 -37 24 -34 39 -9" fill="none" stroke="#F7E9B8" stroke-width="11" stroke-linecap="round"/>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="158" y="389" text-anchor="middle" font-size="21" font-weight="650" fill="#1E293B">太陽</text>
+    <text x="158" y="418" text-anchor="middle" font-size="15" fill="#64748B">圓潤短光芒，像晨光而非狀態圖示</text>
+  </g>
+
+  <!-- Grass -->
+  <g transform="translate(395 203)">
+    <path d="M-126 106C-93 62 -54 74 -17 51C25 25 74 42 128 97V139H-126Z" fill="#BFCDB6"/>
+    <path d="M-126 125C-76 82 -39 111 4 78C48 46 91 75 128 108V139H-126Z" fill="#91A587"/>
+    <g fill="none" stroke="#718669" stroke-width="8" stroke-linecap="round">
+      <path d="M-88 113C-91 85 -99 72 -111 58"/>
+      <path d="M-88 113C-78 86 -70 74 -55 62"/>
+      <path d="M-88 113C-85 81 -82 64 -80 47"/>
+      <path d="M68 101C63 72 54 59 42 46"/>
+      <path d="M68 101C76 72 86 58 101 46"/>
+      <path d="M68 101C69 68 69 53 72 35"/>
+    </g>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="395" y="389" text-anchor="middle" font-size="21" font-weight="650" fill="#1E293B">草地</text>
+    <text x="395" y="418" text-anchor="middle" font-size="15" fill="#64748B">連續地面＋草葉輪廓，形成地平線</text>
+  </g>
+
+  <!-- Leaves -->
+  <g transform="translate(680 214)">
+    <path d="M-78 111C-47 69 -14 28 70 -44" fill="none" stroke="#64785F" stroke-width="10" stroke-linecap="round"/>
+    <path d="M-35 65C-68 53 -80 27 -70 4C-39 3 -17 24 -16 51C-23 57 -29 61 -35 65Z" fill="#A8B99F"/>
+    <path d="M2 25C4 -9 27 -32 58 -31C66 -4 50 24 17 37C12 32 7 28 2 25Z" fill="#7C9076"/>
+    <path d="M35 -5C17 -31 22 -59 43 -76C68 -59 75 -33 59 -9C51 -8 43 -7 35 -5Z" fill="#B8C8B0"/>
+    <path d="M-68 104C-92 82 -91 54 -73 35C-46 46 -34 69 -44 94C-52 98 -60 101 -68 104Z" fill="#7C9076"/>
+    <path d="M-65 91C-30 55 4 25 55 -27" fill="none" stroke="#DCE6D7" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="680" y="389" text-anchor="middle" font-size="21" font-weight="650" fill="#1E293B">葉叢</text>
+    <text x="680" y="418" text-anchor="middle" font-size="15" fill="#64748B">共用枝幹讓葉片讀成一株植物</text>
+  </g>
+
+  <!-- Stones and flower -->
+  <g transform="translate(968 275)">
+    <path d="M-126 73C-128 39 -102 13 -68 16C-38 19 -24 44 -32 73Z" fill="#B3ADA4"/>
+    <path d="M-106 50C-96 30 -75 25 -58 33" fill="none" stroke="#D8D3CB" stroke-width="9" stroke-linecap="round"/>
+    <path d="M-21 73C-23 25 9 -12 51 -6C89 -1 107 30 99 73Z" fill="#CEC7BB"/>
+    <path d="M1 35C13 10 42 3 65 16" fill="none" stroke="#E7E2D9" stroke-width="10" stroke-linecap="round"/>
+    <path d="M92 73C91 50 108 33 130 35C150 37 162 52 158 73Z" fill="#9C988F"/>
+    <path d="M-8 41V-18" stroke="#718669" stroke-width="7" stroke-linecap="round"/>
+    <g transform="translate(-8 -26)">
+      <ellipse cy="-12" rx="10" ry="17" fill="#E9A9A7"/>
+      <ellipse cx="14" cy="1" rx="17" ry="10" fill="#E9A9A7"/>
+      <ellipse cy="14" rx="10" ry="17" fill="#E9A9A7"/>
+      <ellipse cx="-14" cy="1" rx="17" ry="10" fill="#E9A9A7"/>
+      <circle cy="1" r="9" fill="#F1D997"/>
+    </g>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="968" y="389" text-anchor="middle" font-size="21" font-weight="650" fill="#1E293B">石頭與小花</text>
+    <text x="968" y="418" text-anchor="middle" font-size="15" fill="#64748B">不規則輪廓和高光提供自然感與比例</text>
+  </g>
+
+  <path d="M72 466H1128" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Combined backdrop preview -->
+  <g transform="translate(72 512)">
+    <rect width="1056" height="310" rx="28" fill="#F8F7F1" stroke="#E2E8F0" stroke-width="2"/>
+    <path d="M0 219C116 171 208 198 307 159C431 110 541 167 665 140C800 111 925 137 1056 191V310H0Z" fill="#DCEAE6"/>
+    <path d="M0 245C123 183 219 239 333 194C455 146 568 213 683 174C810 131 933 181 1056 216V310H0Z" fill="#BFCDB6"/>
+    <path d="M0 278C128 225 244 271 355 232C477 189 585 254 714 216C839 179 950 228 1056 245V310H0Z" fill="#91A587"/>
+
+    <g transform="translate(915 73) scale(.48)">
+      <g stroke="#D8AE4B" stroke-width="9" stroke-linecap="round">
+        <path d="M0 -82V-112"/><path d="M0 82V112"/><path d="M82 0H112"/><path d="M-82 0H-112"/>
+        <path d="M58 -58L79 -79"/><path d="M58 58L79 79"/><path d="M-58 58L-79 79"/><path d="M-58 -58L-79 -79"/>
+      </g>
+      <circle r="65" fill="#F1D997"/>
+    </g>
+
+    <path d="M520 310C500 276 505 244 536 217C562 194 569 172 556 145C616 173 632 205 603 239C582 263 579 285 593 310Z" fill="#CAB99D"/>
+    <path d="M542 310C529 281 536 254 563 231C584 213 590 196 583 178C609 198 608 218 583 243C560 266 559 287 570 310Z" fill="#E3D8C4"/>
+
+    <g fill="none" stroke="#718669" stroke-width="7" stroke-linecap="round">
+      <path d="M93 271C88 238 78 220 62 204"/><path d="M93 271C101 237 114 219 133 205"/><path d="M93 271C93 232 95 211 100 189"/>
+      <path d="M861 245C858 215 849 198 834 184"/><path d="M861 245C870 211 883 196 901 183"/><path d="M861 245C863 208 865 190 871 169"/>
+    </g>
+
+    <g transform="translate(808 252) scale(.54)">
+      <path d="M-126 73C-128 39 -102 13 -68 16C-38 19 -24 44 -32 73Z" fill="#B3ADA4"/>
+      <path d="M-21 73C-23 25 9 -12 51 -6C89 -1 107 30 99 73Z" fill="#CEC7BB"/>
+      <path d="M92 73C91 50 108 33 130 35C150 37 162 52 158 73Z" fill="#9C988F"/>
+    </g>
+
+    <g opacity=".72" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+      <text x="34" y="44" font-size="15" font-weight="600">組合示意</text>
+      <text x="34" y="69" font-size="14">中央留白保留給日曆或倒數卡</text>
+    </g>
+  </g>
+</svg>
