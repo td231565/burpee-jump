@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-10T09:09:41+08:00",
+  "generatedAt": "2026-09-11T11:02:41+08:00",
   "title": "Design System: BurpeeJump",
   "extensions": {
     "colorMeta": {
@@ -21,6 +21,36 @@
         "displayName": "微妙淺灰表面",
         "canonical": "#F1F5F9",
         "tonalRamp": ["#202932", "#394754", "#536677", "#6E869A", "#8CA7BC", "#ACC8DB", "#D1E0EB", "#F1F5F9"]
+      },
+      "nature-sky": {
+        "role": "decorative",
+        "displayName": "自然薄霧天空",
+        "canonical": "#DCEAE6",
+        "tonalRamp": ["#263331", "#3E514D", "#58706A", "#718F87", "#8EAAA2", "#AFC7C0", "#C8DDD8", "#DCEAE6"]
+      },
+      "nature-foliage": {
+        "role": "decorative",
+        "displayName": "自然柔葉",
+        "canonical": "#A8B99F",
+        "tonalRamp": ["#2D352B", "#465343", "#60705B", "#7A8B73", "#91A58A", "#A8B99F", "#BFCCB8", "#D8E2D4"]
+      },
+      "nature-foliage-deep": {
+        "role": "decorative",
+        "displayName": "自然深葉",
+        "canonical": "#7C9076",
+        "tonalRamp": ["#202A20", "#354533", "#4E604B", "#657A60", "#7C9076", "#9BAC95", "#BECBBC", "#DFE8DD"]
+      },
+      "nature-soil": {
+        "role": "decorative",
+        "displayName": "自然土壤",
+        "canonical": "#CAB99D",
+        "tonalRamp": ["#342E25", "#51483A", "#6D5F4E", "#8B7B66", "#A8957C", "#CAB99D", "#DCD0BB", "#EEE9DE"]
+      },
+      "nature-sun": {
+        "role": "decorative",
+        "displayName": "自然晨光",
+        "canonical": "#F1D997",
+        "tonalRamp": ["#3E361D", "#665A31", "#8D7C45", "#B29B5C", "#D2B974", "#F1D997", "#F7E8BE", "#FCF6E5"]
       },
       "deep-slate-ink": {
         "role": "neutral",

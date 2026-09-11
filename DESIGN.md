@@ -5,6 +5,11 @@ colors:
   warm-canvas: "#FAF9F6"
   solid-surface: "#FFFFFF"
   subtle-surface: "#F1F5F9"
+  nature-sky: "#DCEAE6"
+  nature-foliage: "#A8B99F"
+  nature-foliage-deep: "#7C9076"
+  nature-soil: "#CAB99D"
+  nature-sun: "#F1D997"
   deep-slate-ink: "#1E293B"
   muted-slate: "#64748B"
   sky-primary: "#0284C7"
@@ -229,6 +234,7 @@ components:
 - **Photography:** 日曆、準備與正式計時畫面禁止滿版照片。照片只可評估用於商店宣傳圖，不屬於核心產品 UI。
 - **Illustration:** 一個畫面最多一張，只用於首次引導、空狀態或完成時刻。完成畫面可用發芽、開花、小徑前進或日出表達「今天走了一小步」，但不得取代明確的完成文字與返回操作。
 - **Nature colors:** 自然裝飾不得借用完成綠或其他語意色。正式實作戶外背景前，必須另建低彩度的 foliage、soil 與 sky-decoration token，避免裝飾被誤認為狀態。
+- **Decorative token values:** `nature-sky` `#DCEAE6`、`nature-foliage` `#A8B99F`、`nature-foliage-deep` `#7C9076`、`nature-soil` `#CAB99D` 與 `nature-sun` `#F1D997` 只供程式化背景使用，不取代 `completion-green`。
 - **App icon:** 必須是自有組合標誌，建議以「晨光圓盤＋自然小徑＋跳躍人形」或簡化的「B＋葉片」發展。不得直接把素材庫 glyph 或第三方插畫當作品牌標誌。
 
 ### Optional Human Character

@@ -1,4 +1,5 @@
 import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { X } from 'lucide-react-native';
 import { AppText } from '../../../components/ui/app-text';
 import { IconButton } from '../../../components/ui/icon-button';
 import { colors, radius, spacing } from '../../../theme/tokens';
@@ -46,7 +47,7 @@ export function AudioSettingsModal({
               onPress={onClose}
               accessibilityLabel="關閉音訊設定"
             >
-              ✕
+              <X size={24} color={colors.ink} strokeWidth={2} />
             </IconButton>
           </View>
 

@@ -3,9 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
+import { ChevronLeft } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
 import { Button } from '../components/ui/button';
 import { IconButton } from '../components/ui/icon-button';
+import { NatureBackdrop } from '../components/ui/nature-backdrop';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { getAudioPreferences, type AudioPreferences } from '../data/audio-preferences';
 import { insertCompletion } from '../data/completions';
@@ -87,6 +89,7 @@ export default function WorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <NatureBackdrop />
       <View style={styles.container}>
         {/* 頂部導航列 */}
         <View style={styles.header}>
@@ -94,7 +97,7 @@ export default function WorkoutScreen() {
             onPress={handleBackPress}
             accessibilityLabel="返回日曆"
           >
-            ‹
+            <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
           </IconButton>
           <AppText variant="title" style={styles.headerTitle}>
             Tabata 訓練
@@ -309,6 +312,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    zIndex: 1,
     paddingHorizontal: spacing.base,
     justifyContent: 'space-between',
   },

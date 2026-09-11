@@ -4,6 +4,13 @@ export const colors = {
   surface: '#FFFFFF', // 實心表面
   surfaceSubtle: '#F1F5F9', // 淺灰微表面
 
+  // 晨光自然小徑裝飾色：只作低對比背景，不承擔任何狀態語意
+  natureSky: '#DCEAE6',
+  natureFoliage: '#A8B99F',
+  natureFoliageDeep: '#7C9076',
+  natureSoil: '#CAB99D',
+  natureSun: '#F1D997',
+
   // 主要文字
   ink: '#1E293B', // 深灰藍，確保 pastel 背景上的對比度
   muted: '#64748B', // 次要說明文字
@@ -30,6 +37,14 @@ export const colors = {
   errorLight: '#FEE2E2',
 
   border: '#E2E8F0', // 預設柔和邊框
+} as const;
+
+export const natureColors = {
+  sky: colors.natureSky,
+  foliage: colors.natureFoliage,
+  foliageDeep: colors.natureFoliageDeep,
+  soil: colors.natureSoil,
+  sun: colors.natureSun,
 } as const;
 
 export const spacing = {

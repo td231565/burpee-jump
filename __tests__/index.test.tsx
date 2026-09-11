@@ -51,7 +51,14 @@ describe('首頁日曆 (Phase 2 Tracer Slice)', () => {
   });
 
   it('未有完成紀錄時，開啟 App 顯示目前月份、今天與「開始今天的 2 分鐘」', async () => {
-    render(<HomeScreen />);
+    const { UNSAFE_getByProps } = render(<HomeScreen />);
+
+    const backdrop = UNSAFE_getByProps({ testID: 'nature-backdrop' });
+    expect(backdrop.props.pointerEvents).toBe('none');
+    expect(backdrop.props.accessible).toBe(false);
+    expect(backdrop.props.accessibilityElementsHidden).toBe(true);
+    expect(backdrop.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(backdrop.parent?.children[0]).toBe(backdrop);
 
     // 顯示目前月份 (2026 年 9 月)
     expect(screen.getByText('2026 年 9 月')).toBeTruthy();
@@ -277,5 +284,3 @@ describe('首頁日曆 (Phase 2 Tracer Slice)', () => {
     });
   });
 });
-
-

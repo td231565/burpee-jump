@@ -61,7 +61,14 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
   });
 
   it('進入畫面時呈現固定說明與開始按鈕', () => {
-    const { getByText, getByRole } = render(<WorkoutScreen />);
+    const { getByText, getByRole, UNSAFE_getByProps } = render(<WorkoutScreen />);
+
+    const backdrop = UNSAFE_getByProps({ testID: 'nature-backdrop' });
+    expect(backdrop.props.pointerEvents).toBe('none');
+    expect(backdrop.props.accessible).toBe(false);
+    expect(backdrop.props.accessibilityElementsHidden).toBe(true);
+    expect(backdrop.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(backdrop.parent?.children[0]).toBe(backdrop);
 
     expect(getByText('運動 20 秒')).toBeTruthy();
     expect(getByText('休息 10 秒')).toBeTruthy();

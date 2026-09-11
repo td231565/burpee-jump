@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
+import { ChevronLeft, ChevronRight, Settings } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
 import { Button } from '../components/ui/button';
 import { colors, spacing } from '../theme/tokens';
@@ -16,6 +17,7 @@ import {
 import { MonthCalendar } from '../features/calendar/components/month-calendar';
 import { AudioSettingsModal } from '../features/calendar/components/audio-settings-modal';
 import { IconButton } from '../components/ui/icon-button';
+import { NatureBackdrop } from '../components/ui/nature-backdrop';
 import { getCompletionByDate, getCompletionsForMonth } from '../data/completions';
 import {
   getAudioPreferences,
@@ -129,6 +131,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <NatureBackdrop />
       <View style={styles.container}>
         {/* 頁首顯示完整年份、月份、導航按鈕與今天按鈕 */}
         <View style={styles.header}>
@@ -137,7 +140,7 @@ export default function HomeScreen() {
               onPress={handlePrevMonth}
               accessibilityLabel="上一月"
             >
-              ‹
+              <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
             </IconButton>
             <AppText variant="title" style={styles.headerTitle}>
               {currentMonthText}
@@ -146,7 +149,7 @@ export default function HomeScreen() {
               onPress={handleNextMonth}
               accessibilityLabel="下一月"
             >
-              ›
+              <ChevronRight size={24} color={colors.ink} strokeWidth={2} />
             </IconButton>
           </View>
           <View style={styles.headerActions}>
@@ -162,7 +165,7 @@ export default function HomeScreen() {
               onPress={() => setIsSettingsOpen(true)}
               accessibilityLabel="設定"
             >
-              ⚙
+              <Settings size={24} color={colors.ink} strokeWidth={2} />
             </IconButton>
           </View>
         </View>
@@ -219,6 +222,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    zIndex: 1,
     paddingHorizontal: spacing.base,
     justifyContent: 'space-between',
   },
