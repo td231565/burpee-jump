@@ -1,6 +1,6 @@
 # 波比跳日曆 Post-MVP Phase 1 實作計畫
 
-> 狀態：規格已確認，可開始實作；尚未開始實作；正式影片仍有發布前待決策項目  
+> 狀態：已實作完成；正式影片仍有發布前待決策項目
 > 建立日期：2026-09-11  
 > 需求依據：`PRODUCT_SPEC.md` 5.0.1、5.1.1、6.1、7.1、7.4、7.5，以及 `PRODUCT_DISCUSSIONS.md` D-010、D-051、D-052  
 > 階段名稱：Post-MVP Phase 1「首次引導與教學」，不等同於 `IMPLEMENTATION_PLAN.md` 的 MVP 技術 Phase 1
