@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { ChevronLeft, ChevronRight, Settings } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, ChevronRight, Settings } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
 import { Button } from '../components/ui/button';
 import { colors, spacing } from '../theme/tokens';
@@ -15,7 +15,9 @@ import {
   getPreviousMonth,
 } from '../features/calendar/date-utils';
 import { MonthCalendar } from '../features/calendar/components/month-calendar';
-import { AudioSettingsModal } from '../features/calendar/components/audio-settings-modal';
+import { SettingsModal } from '../features/settings/components/settings-modal';
+import { TutorialModal } from '../features/onboarding/components/tutorial-modal';
+import { OnboardingScreen } from '../features/onboarding/components/onboarding-screen';
 import { IconButton } from '../components/ui/icon-button';
 import { NatureBackdrop } from '../components/ui/nature-backdrop';
 import { getCompletionByDate, getCompletionsForMonth } from '../data/completions';
@@ -24,13 +26,20 @@ import {
   updateAudioPreferences,
   type AudioPreferences,
 } from '../data/audio-preferences';
+import { hasPresentedOnboarding, markOnboardingPresented } from '../data/onboarding';
+import { getUserProfile, updateNickname } from '../data/profile';
 
 export default function HomeScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
+
+  const [appState, setAppState] = useState<'loading' | 'onboarding' | 'home'>('loading');
+  const [nickname, setNickname] = useState<string | null>(null);
+
   const [isTodayCompleted, setIsTodayCompleted] = useState(false);
   const [completionsMap, setCompletionsMap] = useState<Record<string, boolean>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [audioPreferences, setAudioPreferences] = useState<AudioPreferences>({
     voice_enabled: true,
     cues_enabled: true,
@@ -46,6 +55,42 @@ export default function HomeScreen() {
     viewYear === todayDate.getFullYear() && viewMonth === todayDate.getMonth() + 1;
 
   const currentMonthText = formatYearMonth(new Date(viewYear, viewMonth - 1, 1));
+
+  // 啟動 gate：檢查 onboarding 呈現狀態與個人資料
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkInitialState() {
+      if (!db) return;
+      try {
+        const [hasPresented, profile] = await Promise.all([
+          hasPresentedOnboarding(db),
+          getUserProfile(db),
+        ]);
+
+        if (isMounted) {
+          setNickname(profile.nickname);
+          if (!hasPresented) {
+            setAppState('onboarding');
+          } else {
+            setAppState('home');
+          }
+        }
+      } catch {
+        // 讀取 onboarding 狀態或個人資料失敗時，無提示降級至首頁
+        if (isMounted) {
+          setNickname(null);
+          setAppState('home');
+        }
+      }
+    }
+
+    checkInitialState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [db]);
 
   const handlePrevMonth = () => {
     const prev = getPreviousMonth(viewYear, viewMonth);
@@ -82,6 +127,12 @@ export default function HomeScreen() {
         // 偏好寫入失敗維持原狀
       }
     }
+  };
+
+  const handleUpdateNickname = async (newNickname: string | null) => {
+    if (!db) return;
+    await updateNickname(db, newNickname);
+    setNickname(newNickname);
   };
 
   useFocusEffect(
@@ -129,12 +180,59 @@ export default function HomeScreen() {
     }, [db, viewYear, viewMonth])
   );
 
+  if (appState === 'loading') {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <NatureBackdrop />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            accessibilityLabel="載入中"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (appState === 'onboarding') {
+    return (
+      <OnboardingScreen
+        initialNickname={nickname}
+        onSaveNickname={handleUpdateNickname}
+        onMountStep={async () => {
+          if (!db) return;
+          try {
+            await markOnboardingPresented(db);
+          } catch {
+            // best-effort，失敗不阻擋
+          }
+        }}
+        onComplete={(finalNickname) => {
+          setNickname(finalNickname);
+          setAppState('home');
+        }}
+        onDismiss={() => {
+          setAppState('home');
+        }}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <NatureBackdrop />
       <View style={styles.container}>
-        {/* 頁首顯示完整年份、月份、導航按鈕與今天按鈕 */}
+        {/* 頁首：問候（若有）、月份導覽與操作列 */}
         <View style={styles.header}>
+          {nickname && nickname.trim().length > 0 ? (
+            <View style={styles.greetingContainer}>
+              <AppText variant="title" style={styles.greetingText}>
+                {`Hi，${nickname.trim()}`}
+              </AppText>
+            </View>
+          ) : null}
+
           <View style={styles.headerNav}>
             <IconButton
               onPress={handlePrevMonth}
@@ -162,6 +260,12 @@ export default function HomeScreen() {
               今天
             </Button>
             <IconButton
+              onPress={() => setIsTutorialOpen(true)}
+              accessibilityLabel="動作教學"
+            >
+              <BookOpen size={24} color={colors.ink} strokeWidth={2} />
+            </IconButton>
+            <IconButton
               onPress={() => setIsSettingsOpen(true)}
               accessibilityLabel="設定"
             >
@@ -181,12 +285,24 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* 音訊設定 Modal */}
-        <AudioSettingsModal
+        {/* 動作教學 Modal */}
+        <TutorialModal
+          visible={isTutorialOpen}
+          onClose={() => setIsTutorialOpen(false)}
+        />
+
+        {/* 設定 Modal */}
+        <SettingsModal
           visible={isSettingsOpen}
           preferences={audioPreferences}
           onUpdatePreferences={handleUpdatePreferences}
+          onLoadProfile={async () => {
+            if (!db) return { nickname: null };
+            return getUserProfile(db);
+          }}
+          onUpdateNickname={handleUpdateNickname}
           onClose={() => setIsSettingsOpen(false)}
+          initialNickname={nickname}
         />
 
         {/* 底部主要操作：目前月份為開始/已完成，非目前月份為回到今天 */}
@@ -220,6 +336,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     zIndex: 1,
@@ -230,6 +351,17 @@ const styles = StyleSheet.create({
     paddingTop: spacing.base,
     paddingBottom: spacing.sm,
     alignItems: 'center',
+  },
+  greetingContainer: {
+    width: '100%',
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  greetingText: {
+    color: colors.ink,
+    fontSize: 22,
+    lineHeight: 28,
   },
   headerNav: {
     flexDirection: 'row',
