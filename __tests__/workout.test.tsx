@@ -3,12 +3,17 @@ import WorkoutScreen from '../src/app/workout';
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
+const mockDismissTo = jest.fn();
+let mockSearchParams: Record<string, string> = {};
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: mockBack,
     push: mockPush,
     replace: jest.fn(),
+    dismissTo: mockDismissTo,
   }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 const mockGetFirstAsync = jest.fn();
@@ -49,6 +54,8 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     });
     mockBack.mockClear();
     mockPush.mockClear();
+    mockDismissTo.mockClear();
+    mockSearchParams = {};
     mockGetFirstAsync.mockResolvedValue({
       voice_enabled: 1,
       cues_enabled: 1,
@@ -76,10 +83,10 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     expect(getByRole('button', { name: '開始' })).toBeTruthy();
   });
 
-  it('在 ready 狀態點擊取消或返回，直接返回日曆，不顯示確認對話框', () => {
+  it('在 ready 狀態點擊取消或返回，直接返回首頁，不顯示確認對話框', () => {
     const { getByRole, queryByText } = render(<WorkoutScreen />);
 
-    fireEvent.press(getByRole('button', { name: '返回日曆' }));
+    fireEvent.press(getByRole('button', { name: '返回首頁' }));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(queryByText('確定要取消訓練嗎？')).toBeNull();
@@ -152,7 +159,7 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     expect(getByRole('button', { name: '暫停' })).toBeTruthy();
   });
 
-  it('正常完成後寫入鎖定的開始日期與實際 UTC 完成時間，寫入成功才顯示完成並可返回日曆', async () => {
+  it('正常完成後寫入鎖定的開始日期與實際 UTC 完成時間，寫入成功才顯示完成並透過 dismissTo 返回首頁傳遞歸屬日', async () => {
     mockRunAsync.mockClear();
     mockRunAsync.mockResolvedValue({ lastInsertRowId: 1, changes: 1 });
 
@@ -171,14 +178,22 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
       expect.arrayContaining([expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.any(String)])
     );
 
-    // 寫入成功後顯示訓練完成與返回日曆按鈕
+    // 寫入成功後顯示訓練完成與返回首頁按鈕
     expect(getByText('訓練完成！')).toBeTruthy();
-    const backButtons = getAllByRole('button', { name: '返回日曆' });
+    expect(getByText('本日波比跳 Tabata 訓練已完成')).toBeTruthy();
+    const backButtons = getAllByRole('button', { name: '返回首頁' });
     expect(backButtons.length).toBeGreaterThanOrEqual(1);
 
-    // 點擊返回日曆按鈕
+    // 點擊返回首頁按鈕，透過 dismissTo 返回並傳遞 completedLocalDate
     fireEvent.press(backButtons[backButtons.length - 1]);
-    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockDismissTo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pathname: '/',
+        params: expect.objectContaining({
+          completedLocalDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
+      })
+    );
   });
 
   it('寫入失敗時停在待儲存狀態，不顯示虛假成功，並提供重新儲存與放棄紀錄按鈕', async () => {
@@ -241,7 +256,7 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     expect(queryByText('儲存失敗')).toBeNull();
   });
 
-  it('寫入失敗時點擊放棄紀錄或返回需先確認，取消確認留在原畫面，確認放棄後清空記憶體並返回日曆且不保存紀錄', async () => {
+  it('寫入失敗時點擊放棄紀錄或返回需先確認，取消確認留在原畫面，確認放棄後清空記憶體並返回首頁且不保存紀錄', async () => {
     mockRunAsync.mockClear();
     mockRunAsync.mockRejectedValue(new Error('Persistent error'));
 
@@ -271,12 +286,53 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
     expect(getByText('儲存失敗')).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
 
-    // 點擊返回日曆按鈕（標頭）亦觸發相同放棄確認
-    fireEvent.press(getByRole('button', { name: '返回日曆' }));
+    // 點擊返回首頁按鈕（標頭）亦觸發相同放棄確認
+    fireEvent.press(getByRole('button', { name: '返回首頁' }));
     expect(getByText('確定要放棄紀錄嗎？')).toBeTruthy();
 
     // 確認放棄並離開
     fireEvent.press(getByRole('button', { name: '放棄並離開' }));
     expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  describe('不記錄訓練模式 (mode=unrecorded)', () => {
+    beforeEach(() => {
+      mockSearchParams = { mode: 'unrecorded' };
+    });
+
+    it('完成訓練後不呼叫 SQLite 寫入，直接顯示「本次訓練已完成」，點擊返回首頁以 router.back 返回', async () => {
+      mockRunAsync.mockClear();
+
+      const { getByRole, getAllByRole, getByText, queryByText } = render(<WorkoutScreen />);
+
+      fireEvent.press(getByRole('button', { name: '開始' }));
+
+      act(() => {
+        jest.advanceTimersByTime(113500);
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // 絕不呼叫 runAsync
+      expect(mockRunAsync).not.toHaveBeenCalled();
+
+      // 畫面不出現 saving 或 saveError 相關文案
+      expect(queryByText('正在保存紀錄...')).toBeNull();
+      expect(queryByText('儲存失敗')).toBeNull();
+      expect(queryByText('重新儲存')).toBeNull();
+      expect(queryByText('放棄紀錄')).toBeNull();
+
+      // 顯示「訓練完成！」與「本次訓練已完成」
+      expect(getByText('訓練完成！')).toBeTruthy();
+      expect(getByText('本次訓練已完成')).toBeTruthy();
+      expect(queryByText('本日波比跳 Tabata 訓練已完成')).toBeNull();
+      expect(queryByText('已記錄')).toBeNull();
+
+      // 點擊返回首頁按鈕，使用 router.back() 返回，不傳 local_date
+      const backButtons = getAllByRole('button', { name: '返回首頁' });
+      fireEvent.press(backButtons[backButtons.length - 1]);
+      expect(mockBack).toHaveBeenCalledTimes(1);
+      expect(mockDismissTo).not.toHaveBeenCalled();
+    });
   });
 });

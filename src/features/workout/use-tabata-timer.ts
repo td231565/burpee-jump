@@ -32,6 +32,7 @@ interface WorkoutState {
   snapshot: TabataSnapshot;
   isAudioDegraded: boolean;
   saveRecord: SaveRecord | null;
+  recordCompletion: boolean;
 }
 
 type WorkoutAction =
@@ -55,6 +56,7 @@ const initialState: WorkoutState = {
   snapshot: initialSnapshot,
   isAudioDegraded: false,
   saveRecord: null,
+  recordCompletion: true,
 };
 
 function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutState {
@@ -86,6 +88,14 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         status: state.snapshot.phase === 'preparing' ? 'preparing' : 'running',
       };
     case 'FINISH':
+      if (!state.recordCompletion) {
+        return {
+          ...state,
+          status: 'completed',
+          saveRecord: null,
+          snapshot: deriveTabataSnapshot(TOTAL_FLOW_DURATION_MS),
+        };
+      }
       return {
         ...state,
         status: 'saving',
@@ -129,10 +139,14 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
 
 export interface UseTabataTimerProps {
   preferences: AudioPreferences;
+  recordCompletion?: boolean;
 }
 
-export function useTabataTimer({ preferences }: UseTabataTimerProps) {
-  const [state, dispatch] = useReducer(workoutReducer, initialState);
+export function useTabataTimer({ preferences, recordCompletion = true }: UseTabataTimerProps) {
+  const [state, dispatch] = useReducer(workoutReducer, {
+    ...initialState,
+    recordCompletion,
+  });
 
   const accumulatedElapsedRef = useRef(0);
   const sessionStartTimeRef = useRef<number | null>(null);

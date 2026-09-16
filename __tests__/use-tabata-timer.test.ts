@@ -198,4 +198,66 @@ describe('useTabataTimer Hook (Seam 2 & 4)', () => {
 
     expect(result.current.status).toBe('completed');
   });
+
+  describe('不記錄訓練 (recordCompletion: false)', () => {
+    it('完整 113 秒後直接進入 completed，且 saveRecord 為 null', () => {
+      const { result } = renderHook(() =>
+        useTabataTimer({ preferences: defaultPrefs, recordCompletion: false })
+      );
+
+      act(() => {
+        result.current.start();
+      });
+
+      expect(result.current.status).toBe('preparing');
+      expect(result.current.lockedLocalDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      // 快轉 113.5 秒
+      act(() => {
+        jest.advanceTimersByTime(113500);
+      });
+
+      // 直接進入 completed，不經過 saving，saveRecord 為 null
+      expect(result.current.status).toBe('completed');
+      expect(result.current.saveRecord).toBeNull();
+      expect(result.current.snapshot.isFinished).toBe(true);
+      expect(mockDeactivateKeepAwake).toHaveBeenCalled();
+    });
+
+    it('暫停、繼續與取消行為與一般模式一致', () => {
+      const { result } = renderHook(() =>
+        useTabataTimer({ preferences: defaultPrefs, recordCompletion: false })
+      );
+
+      act(() => {
+        result.current.start();
+      });
+
+      // 快轉到運動階段
+      act(() => {
+        jest.advanceTimersByTime(8000);
+      });
+      expect(result.current.status).toBe('running');
+
+      // 暫停
+      act(() => {
+        result.current.pause();
+      });
+      expect(result.current.status).toBe('paused');
+
+      // 繼續
+      act(() => {
+        result.current.resume();
+      });
+      expect(result.current.status).toBe('running');
+
+      // 取消
+      act(() => {
+        result.current.cancel();
+      });
+      expect(result.current.status).toBe('cancelled');
+      expect(result.current.saveRecord).toBeNull();
+    });
+  });
 });
+

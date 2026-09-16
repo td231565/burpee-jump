@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { ChevronLeft } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
@@ -18,6 +18,8 @@ import { colors, radius, spacing } from '../theme/tokens';
 export default function WorkoutScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isUnrecorded = mode === 'unrecorded';
 
   const [preferences, setPreferences] = useState<AudioPreferences>({
     voice_enabled: true,
@@ -31,18 +33,28 @@ export default function WorkoutScreen() {
   useEffect(() => {
     let isMounted = true;
     if (db) {
-      getAudioPreferences(db).then((prefs) => {
-        if (isMounted) {
-          setPreferences(prefs);
-        }
-      }).catch(() => {});
+      getAudioPreferences(db)
+        .then((prefs) => {
+          if (isMounted) {
+            setPreferences(prefs);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setPreferences({
+              voice_enabled: false,
+              cues_enabled: false,
+              music_enabled: false,
+            });
+          }
+        });
     }
     return () => {
       isMounted = false;
     };
   }, [db]);
 
-  const timer = useTabataTimer({ preferences });
+  const timer = useTabataTimer({ preferences, recordCompletion: !isUnrecorded });
 
   // 自動保存
   const isSavingRef = useRef(false);
@@ -71,7 +83,14 @@ export default function WorkoutScreen() {
     } else if (timer.status === 'saveError') {
       setShowDiscardConfirm(true);
     } else if (timer.status === 'completed') {
-      router.back();
+      if (isUnrecorded) {
+        router.back();
+      } else {
+        router.dismissTo({
+          pathname: '/',
+          params: { completedLocalDate: timer.lockedLocalDate ?? '' },
+        });
+      }
     }
   };
 
@@ -95,7 +114,7 @@ export default function WorkoutScreen() {
         <View style={styles.header}>
           <IconButton
             onPress={handleBackPress}
-            accessibilityLabel="返回日曆"
+            accessibilityLabel="返回首頁"
           >
             <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
           </IconButton>
@@ -174,7 +193,7 @@ export default function WorkoutScreen() {
                 訓練完成！
               </AppText>
               <AppText variant="body" style={styles.completedMessage}>
-                本日波比跳 Tabata 訓練已完成
+                {isUnrecorded ? '本次訓練已完成' : '本日波比跳 Tabata 訓練已完成'}
               </AppText>
             </View>
           )}
@@ -270,11 +289,11 @@ export default function WorkoutScreen() {
           {timer.status === 'completed' && (
             <Button
               variant="primary"
-              onPress={() => router.back()}
-              accessibilityLabel="返回日曆"
+              onPress={handleBackPress}
+              accessibilityLabel="返回首頁"
               style={styles.actionButton}
             >
-              返回日曆
+              返回首頁
             </Button>
           )}
         </View>
