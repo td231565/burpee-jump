@@ -2,7 +2,7 @@
 
 > 狀態：已完成  
 > 建立日期：2026-09-14  
-> 需求依據：`PRODUCT_SPEC.md` 5.0.1、5.3.1.1、6、6.1、6.3、6.4，以及 `PRODUCT_DISCUSSIONS.md` D-011、D-014、D-031、D-032  
+> 需求依據：`PRODUCT_SPEC.md` 第 2 章、第 3.1 節、第 3.4 節、第 3.5 節、第 3.6 節（原 5.0.1、5.3.1.1、6、6.1、6.3、6.4），以及 `PRODUCT_DISCUSSIONS.md` D-011、D-014、D-031、D-032  
 > 階段名稱：Post-MVP Phase 1 Additional「首頁與日曆導覽調整」，固定於 Post-MVP Phase 1 完成後、Phase 2 開始前進行
 
 ## 1. 交付目標
