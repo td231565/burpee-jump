@@ -26,6 +26,7 @@ export default function RootLayout() {
             presentation: 'modal',
           }}
         />
+        <Stack.Screen name="challenge" />
         <Stack.Screen
           name="audio-test"
           options={{

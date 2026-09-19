@@ -21,12 +21,15 @@ import { IconButton } from '../components/ui/icon-button';
 import { NatureBackdrop } from '../components/ui/nature-backdrop';
 import { colors, radius, spacing } from '../theme/tokens';
 import {
+  addDays,
+  calculateStreak,
   formatDetailDate,
   formatLocalDateKey,
   formatYearMonth,
   getMonthDateRange,
   getNextMonth,
   getPreviousMonth,
+  getYesterday,
 } from '../features/calendar/date-utils';
 import { MonthCalendar } from '../features/calendar/components/month-calendar';
 import { SettingsModal } from '../features/settings/components/settings-modal';
@@ -40,6 +43,31 @@ import {
 } from '../data/audio-preferences';
 import { hasPresentedOnboarding, markOnboardingPresented } from '../data/onboarding';
 import { getUserProfile, updateNickname } from '../data/profile';
+import {
+  getActiveChallenge,
+  getChallengeSummary,
+  getUnsettledEndedChallenge,
+} from '../data/challenges';
+import {
+  cancelRestDay,
+  getRestDayByDate,
+  getRestDaysForRange,
+  setRestDay,
+} from '../data/rest-days';
+import {
+  evaluateSettlement,
+  persistSettlement,
+} from '../features/challenge/settlement-service';
+import { RescueDialog } from '../features/challenge/components/rescue-dialog';
+import { SettlementModal } from '../features/challenge/components/settlement-modal';
+import type {
+  Challenge,
+  ChallengeSummary,
+  SettlementOutcome,
+} from '../data/challenge-types';
+
+// 記憶體中單次執行提示旗標（不入庫）
+let hasShownSettlementToastInSession = false;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -57,14 +85,37 @@ export default function HomeScreen() {
   const [todayDate, setTodayDate] = useState(() => new Date());
   const currentKeyRef = useRef(formatLocalDateKey(todayDate));
 
-  // 今日狀態：loading | pending | completed | unavailable
-  const [todayStatus, setTodayStatus] = useState<'loading' | 'pending' | 'completed' | 'unavailable'>('loading');
-  const todayTrustedStateRef = useRef<Record<string, 'pending' | 'completed'>>({});
+  // 今日狀態：loading | pending | completed | rest | unavailable
+  const [todayStatus, setTodayStatus] = useState<
+    'loading' | 'pending' | 'completed' | 'rest' | 'unavailable'
+  >('loading');
+  const todayTrustedStateRef = useRef<
+    Record<string, 'pending' | 'completed' | 'rest'>
+  >({});
 
   // 月曆紀錄狀態：loading | ready | unavailable
   const [monthStatus, setMonthStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [completionsMap, setCompletionsMap] = useState<Record<string, boolean>>({});
+  const [restDaysMap, setRestDaysMap] = useState<Record<string, boolean>>({});
   const monthTrustedDataRef = useRef<Record<string, boolean>>({});
+
+  // 挑戰與連續天數狀態
+  const [challengeSummary, setChallengeSummary] = useState<ChallengeSummary | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [isGentleRecovery, setIsGentleRecovery] = useState(false);
+  const [pendingActionDate, setPendingActionDate] = useState<string | null>(null);
+
+  // 一次性結算與補登挽救對話框
+  const [isRescueDialogOpen, setIsRescueDialogOpen] = useState(false);
+  const [rescueTarget, setRescueTarget] = useState<{
+    challenge: Challenge;
+    lastDate: string;
+  } | null>(null);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [settlementOutcome, setSettlementOutcome] = useState<SettlementOutcome>('completed');
+
+  // Toast 狀態
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [viewYear, setViewYear] = useState(() => todayDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(() => todayDate.getMonth() + 1);
@@ -88,17 +139,34 @@ export default function HomeScreen() {
 
   const currentMonthText = formatYearMonth(new Date(viewYear, viewMonth - 1, 1));
 
-  // 獨立查詢函式
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  }, []);
+
+  // 獨立查詢今日狀態
   const fetchTodayStatus = useCallback(async (database: any, dateKey: string, forceFresh = false) => {
     setTodayStatus('loading');
     if (forceFresh) {
       delete todayTrustedStateRef.current[dateKey];
     }
     try {
-      const record = await getCompletionByDate(database, dateKey);
-      const nextStatus = record ? 'completed' : 'pending';
-      todayTrustedStateRef.current[dateKey] = nextStatus;
-      setTodayStatus(nextStatus);
+      const comp = await getCompletionByDate(database, dateKey);
+      if (comp) {
+        todayTrustedStateRef.current[dateKey] = 'completed';
+        setTodayStatus('completed');
+        return;
+      }
+      const rest = await getRestDayByDate(database, dateKey);
+      if (rest) {
+        todayTrustedStateRef.current[dateKey] = 'rest';
+        setTodayStatus('rest');
+        return;
+      }
+      todayTrustedStateRef.current[dateKey] = 'pending';
+      setTodayStatus('pending');
     } catch {
       const trusted = todayTrustedStateRef.current[dateKey];
       if (trusted) {
@@ -109,17 +177,26 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // 查詢當月完成與休息紀錄
   const fetchMonthCompletions = useCallback(async (database: any, year: number, month: number) => {
     const monthKey = `${year}-${month}`;
     setMonthStatus('loading');
     try {
       const { startDate, endDate } = getMonthDateRange(year, month);
-      const monthRecords = await getCompletionsForMonth(database, startDate, endDate);
-      const map: Record<string, boolean> = {};
+      const [monthRecords, restRecords] = await Promise.all([
+        getCompletionsForMonth(database, startDate, endDate),
+        getRestDaysForRange(database, startDate, endDate),
+      ]);
+      const compMap: Record<string, boolean> = {};
       monthRecords.forEach((r) => {
-        map[r.local_date] = true;
+        compMap[r.local_date] = true;
       });
-      setCompletionsMap(map);
+      const rMap: Record<string, boolean> = {};
+      restRecords.forEach((r) => {
+        rMap[r.local_date] = true;
+      });
+      setCompletionsMap(compMap);
+      setRestDaysMap(rMap);
       monthTrustedDataRef.current[monthKey] = true;
       setMonthStatus('ready');
     } catch {
@@ -130,6 +207,102 @@ export default function HomeScreen() {
       }
     }
   }, []);
+
+  // 查詢挑戰與連續天數
+  const fetchChallengeAndStreak = useCallback(
+    async (database: any, currentKey: string, isCompleted: boolean) => {
+      try {
+        const active = await getActiveChallenge(database, currentKey);
+        let summary: ChallengeSummary | null = null;
+        if (active) {
+          summary = await getChallengeSummary(database, active, currentKey);
+          setChallengeSummary(summary);
+        } else {
+          setChallengeSummary(null);
+        }
+
+        // 計算連續訓練天數 (回溯 365 天)
+        const rangeStart = addDays(currentKey, -365);
+        const [comps, rests] = await Promise.all([
+          getCompletionsForMonth(database, rangeStart, currentKey),
+          getRestDaysForRange(database, rangeStart, currentKey),
+        ]);
+        const compSet = new Set(comps.map((c) => c.local_date));
+        const restSet = new Set(rests.map((r) => r.local_date));
+
+        const streakVal = calculateStreak({
+          completedDates: compSet,
+          restDates: restSet,
+          todayKey: currentKey,
+          isTodayCompleted: isCompleted,
+        });
+        setStreak(streakVal);
+
+        // 溫和復歸與可補登操作檢查
+        const yesterdayKey = getYesterday(currentKey);
+        const yesterdayHasRecord = compSet.has(yesterdayKey) || restSet.has(yesterdayKey);
+
+        if (summary && !summary.isEnded) {
+          const yesterdayInChallenge =
+            yesterdayKey >= summary.startDate && yesterdayKey <= summary.endDate;
+
+          if (yesterdayInChallenge && !yesterdayHasRecord) {
+            setIsGentleRecovery(true);
+            if (summary.remainingRestQuota > 0) {
+              setPendingActionDate(yesterdayKey);
+            } else {
+              setPendingActionDate(null);
+            }
+          } else {
+            setIsGentleRecovery(false);
+            setPendingActionDate(null);
+          }
+        } else {
+          setIsGentleRecovery(false);
+          setPendingActionDate(null);
+        }
+      } catch {
+        setChallengeSummary(null);
+        setStreak(0);
+        setIsGentleRecovery(false);
+        setPendingActionDate(null);
+      }
+    },
+    []
+  );
+
+  // 結算檢查（僅在首頁、非操作中觸發）
+  const checkSettlement = useCallback(
+    async (database: any, currentKey: string) => {
+      try {
+        const unsettled = await getUnsettledEndedChallenge(database, currentKey);
+        if (!unsettled) return;
+
+        const evalResult = await evaluateSettlement(database, unsettled, currentKey);
+        if (evalResult.canRescue) {
+          setRescueTarget({
+            challenge: unsettled,
+            lastDate: evalResult.lastDate,
+          });
+          setIsRescueDialogOpen(true);
+        } else {
+          const persisted = await persistSettlement(database, unsettled.id);
+          if (persisted) {
+            setSettlementOutcome(evalResult.outcome);
+            setIsSettlementModalOpen(true);
+          } else {
+            if (!hasShownSettlementToastInSession) {
+              hasShownSettlementToastInSession = true;
+              showToast('挑戰結算中');
+            }
+          }
+        }
+      } catch {
+        // 靜默
+      }
+    },
+    [showToast]
+  );
 
   const fetchAudioPreferences = useCallback(async (database: any) => {
     try {
@@ -206,19 +379,31 @@ export default function HomeScreen() {
           setViewYear(compYear);
           setViewMonth(compMonth);
         }
-        fetchTodayStatus(db, currentKey, true);
+        fetchTodayStatus(db, currentKey, true).then(() => {
+          fetchChallengeAndStreak(db, currentKey, true);
+        });
         fetchMonthCompletions(db, targetYear, targetMonth);
         fetchAudioPreferences(db);
+        checkSettlement(db, currentKey);
       } else {
-        fetchTodayStatus(db, currentKey);
+        fetchTodayStatus(db, currentKey).then(() => {
+          fetchChallengeAndStreak(
+            db,
+            currentKey,
+            todayTrustedStateRef.current[currentKey] === 'completed'
+          );
+        });
         fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
         fetchAudioPreferences(db);
+        checkSettlement(db, currentKey);
       }
     }, [
       db,
       fetchTodayStatus,
       fetchMonthCompletions,
+      fetchChallengeAndStreak,
       fetchAudioPreferences,
+      checkSettlement,
       params.completedLocalDate,
     ])
   );
@@ -232,10 +417,16 @@ export default function HomeScreen() {
         if (nowKey !== currentKeyRef.current) {
           currentKeyRef.current = nowKey;
           setTodayDate(now);
-          // 跨日後先清除新日期的快取並刷新
-          fetchTodayStatus(db, nowKey, true);
+          fetchTodayStatus(db, nowKey, true).then(() => {
+            fetchChallengeAndStreak(
+              db,
+              nowKey,
+              todayTrustedStateRef.current[nowKey] === 'completed'
+            );
+          });
           fetchMonthCompletions(db, viewYear, viewMonth);
           fetchAudioPreferences(db);
+          checkSettlement(db, nowKey);
         }
       }
     });
@@ -243,7 +434,16 @@ export default function HomeScreen() {
     return () => {
       subscription.remove();
     };
-  }, [db, viewYear, viewMonth, fetchTodayStatus, fetchMonthCompletions, fetchAudioPreferences]);
+  }, [
+    db,
+    viewYear,
+    viewMonth,
+    fetchTodayStatus,
+    fetchMonthCompletions,
+    fetchChallengeAndStreak,
+    fetchAudioPreferences,
+    checkSettlement,
+  ]);
 
   const handlePrevMonth = () => {
     const prev = getPreviousMonth(viewYear, viewMonth);
@@ -325,6 +525,77 @@ export default function HomeScreen() {
     if (!db) return;
     await updateNickname(db, newNickname);
     setNickname(newNickname);
+  };
+
+  // 當日設定休息
+  const handleSetTodayRest = async () => {
+    if (!db || !challengeSummary) return;
+    const currentKey = formatLocalDateKey(todayDate);
+    await setRestDay(
+      db,
+      currentKey,
+      challengeSummary.challenge.id,
+      new Date().toISOString()
+    );
+    await fetchTodayStatus(db, currentKey, true);
+    await fetchChallengeAndStreak(db, currentKey, false);
+    await fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
+  };
+
+  // 當日取消休息
+  const handleCancelTodayRest = async () => {
+    if (!db) return;
+    const currentKey = formatLocalDateKey(todayDate);
+    await cancelRestDay(db, currentKey);
+    await fetchTodayStatus(db, currentKey, true);
+    await fetchChallengeAndStreak(db, currentKey, false);
+    await fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
+  };
+
+  // 補登挽救對話框：是
+  const handleRescueConfirm = async (): Promise<boolean> => {
+    if (!db || !rescueTarget) return false;
+    const currentKey = formatLocalDateKey(new Date());
+    const yesterdayKey = getYesterday(currentKey);
+
+    const isStillYesterday = rescueTarget.lastDate === yesterdayKey;
+    if (isStillYesterday) {
+      try {
+        await setRestDay(
+          db,
+          rescueTarget.lastDate,
+          rescueTarget.challenge.id,
+          new Date().toISOString()
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    const persisted = await persistSettlement(db, rescueTarget.challenge.id);
+    if (!persisted) return false;
+
+    setIsRescueDialogOpen(false);
+    setSettlementOutcome(isStillYesterday ? 'completed' : 'uncompleted');
+    setIsSettlementModalOpen(true);
+    setRescueTarget(null);
+
+    fetchTodayStatus(db, currentKey, true);
+    fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
+    fetchChallengeAndStreak(db, currentKey, false);
+    return true;
+  };
+
+  // 補登挽救對話框：否
+  const handleRescueDecline = async () => {
+    if (!db || !rescueTarget) return;
+    setIsRescueDialogOpen(false);
+    const persisted = await persistSettlement(db, rescueTarget.challenge.id);
+    if (persisted) {
+      setSettlementOutcome('uncompleted');
+      setIsSettlementModalOpen(true);
+    }
+    setRescueTarget(null);
   };
 
   if (appState === 'loading') {
@@ -455,6 +726,15 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
+            {/* 進行中挑戰摘要 */}
+            {challengeSummary && !challengeSummary.isEnded && (
+              <View style={styles.challengeSummaryBanner}>
+                <AppText variant="body" weight="medium" style={styles.challengeSummaryText}>
+                  {`挑戰還有 ${challengeSummary.remainingDays} 天，剩餘休息 ${challengeSummary.remainingRestQuota} 天`}
+                </AppText>
+              </View>
+            )}
+
             {/* 首頁中間核心區：完整年月日與狀態 */}
             <View style={styles.homeCenter}>
               <View style={styles.todayStatusCard}>
@@ -480,6 +760,14 @@ export default function HomeScreen() {
                   </View>
                 )}
 
+                {todayStatus === 'rest' && (
+                  <View style={styles.statusRow}>
+                    <AppText variant="title" style={styles.restStatusText}>
+                      今日為休息日
+                    </AppText>
+                  </View>
+                )}
+
                 {todayStatus === 'completed' && (
                   <View style={styles.statusRow}>
                     <AppText variant="title" style={styles.completedStatusText}>
@@ -500,6 +788,13 @@ export default function HomeScreen() {
 
             {/* 首頁底部操作區 */}
             <View style={styles.homeFooter}>
+              {/* 溫和復歸提示 */}
+              {isGentleRecovery && todayStatus === 'pending' && (
+                <AppText variant="body" style={styles.recoveryText}>
+                  今天重新開始
+                </AppText>
+              )}
+
               {todayStatus === 'loading' && (
                 <Button
                   disabled
@@ -511,28 +806,92 @@ export default function HomeScreen() {
               )}
 
               {todayStatus === 'pending' && (
-                <Button
-                  variant="primary"
-                  onPress={() => router.push('/workout')}
-                  accessibilityLabel="開始今天的 2 分鐘"
-                >
-                  開始今天的 2 分鐘
-                </Button>
+                <View style={styles.footerActionGroup}>
+                  <Button
+                    variant="primary"
+                    onPress={() => router.push('/workout')}
+                    accessibilityLabel="開始今天的 2 分鐘"
+                    style={styles.actionButton}
+                  >
+                    開始今天的 2 分鐘
+                  </Button>
+
+                  {challengeSummary && !challengeSummary.isEnded ? (
+                    challengeSummary.remainingRestQuota > 0 ? (
+                      <Button
+                        variant="secondary"
+                        onPress={handleSetTodayRest}
+                        accessibilityLabel="把今天設為休息日"
+                        style={styles.actionButton}
+                      >
+                        把今天設為休息日
+                      </Button>
+                    ) : (
+                      <AppText variant="caption" style={styles.quotaEmptyText}>
+                        休息額度已用完
+                      </AppText>
+                    )
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onPress={() => router.push('/challenge' as any)}
+                      accessibilityLabel="開始挑戰"
+                      style={styles.actionButton}
+                    >
+                      開始挑戰
+                    </Button>
+                  )}
+                </View>
+              )}
+
+              {todayStatus === 'rest' && (
+                <View style={styles.footerActionGroup}>
+                  <Button
+                    variant="primary"
+                    onPress={() => router.push('/workout')}
+                    accessibilityLabel="開始今天的 2 分鐘"
+                    style={styles.actionButton}
+                  >
+                    開始今天的 2 分鐘
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onPress={handleCancelTodayRest}
+                    accessibilityLabel="取消休息"
+                    style={styles.actionButton}
+                  >
+                    取消休息
+                  </Button>
+                </View>
               )}
 
               {todayStatus === 'completed' && (
-                <Button
-                  variant="primary"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/workout',
-                      params: { mode: 'unrecorded' },
-                    })
-                  }
-                  accessibilityLabel="再做一次"
-                >
-                  再做一次
-                </Button>
+                <View style={styles.footerActionGroup}>
+                  <Button
+                    variant="primary"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/workout',
+                        params: { mode: 'unrecorded' },
+                      })
+                    }
+                    accessibilityLabel="再做一次"
+                    style={styles.actionButton}
+                  >
+                    再做一次
+                  </Button>
+
+                  {!challengeSummary || challengeSummary.isEnded ? (
+                    <Button
+                      variant="secondary"
+                      onPress={() => router.push('/challenge' as any)}
+                      accessibilityLabel="開始挑戰"
+                      style={styles.actionButton}
+                    >
+                      開始挑戰
+                    </Button>
+                  ) : null}
+                </View>
               )}
 
               {todayStatus === 'unavailable' && (
@@ -594,6 +953,18 @@ export default function HomeScreen() {
                 </IconButton>
               </View>
 
+              {/* 連續訓練天數與挑戰期間資訊 */}
+              <View style={styles.calendarStreakRow}>
+                <AppText variant="body" weight="bold" style={styles.calendarStreakText}>
+                  {`已連續訓練 ${streak} 天`}
+                </AppText>
+                {challengeSummary && !challengeSummary.isEnded && (
+                  <AppText variant="caption" style={styles.calendarChallengeInfoText}>
+                    {`挑戰期間：${formatDetailDate(challengeSummary.startDate)} 至 ${formatDetailDate(challengeSummary.endDate)}（剩餘休息 ${challengeSummary.remainingRestQuota} 天）`}
+                  </AppText>
+                )}
+              </View>
+
               {!isCurrentMonthView && (
                 <View style={styles.calendarTodayActionRow}>
                   <Button
@@ -652,6 +1023,10 @@ export default function HomeScreen() {
                       month={viewMonth}
                       today={todayDate}
                       completionsMap={completionsMap}
+                      restDaysMap={restDaysMap}
+                      challengeStartDate={challengeSummary && !challengeSummary.isEnded ? challengeSummary.startDate : null}
+                      challengeEndDate={challengeSummary && !challengeSummary.isEnded ? challengeSummary.endDate : null}
+                      pendingActionDate={pendingActionDate}
                       onSelectDate={handleSelectDate}
                     />
                   </View>
@@ -660,6 +1035,29 @@ export default function HomeScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {/* 非阻擋式 Toast */}
+        {toastMessage && (
+          <View style={styles.toastContainer} accessibilityRole="alert" accessibilityLiveRegion="polite">
+            <AppText variant="caption" style={styles.toastText}>
+              {toastMessage}
+            </AppText>
+          </View>
+        )}
+
+        {/* 補登挽救對話框 */}
+        <RescueDialog
+          visible={isRescueDialogOpen}
+          onConfirm={handleRescueConfirm}
+          onDecline={handleRescueDecline}
+        />
+
+        {/* 滿版結算畫面 */}
+        <SettlementModal
+          visible={isSettlementModalOpen}
+          outcome={settlementOutcome}
+          onClose={() => setIsSettlementModalOpen(false)}
+        />
 
         {/* 動作教學 Modal */}
         <TutorialModal
@@ -737,7 +1135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingRight: 52, // 避免覆蓋右上側邊導覽條
+    paddingRight: 52,
   },
   homeTopActions: {
     flexDirection: 'row',
@@ -754,6 +1152,19 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 22,
     lineHeight: 28,
+  },
+  challengeSummaryBanner: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  challengeSummaryText: {
+    color: colors.ink,
   },
   homeCenter: {
     flex: 1,
@@ -785,6 +1196,10 @@ const styles = StyleSheet.create({
     color: colors.work,
     fontWeight: '600',
   },
+  restStatusText: {
+    color: colors.rest,
+    fontWeight: '600',
+  },
   completedStatusText: {
     color: colors.today,
     fontWeight: '600',
@@ -796,6 +1211,23 @@ const styles = StyleSheet.create({
   homeFooter: {
     paddingVertical: spacing.base,
     paddingBottom: spacing.lg,
+  },
+  footerActionGroup: {
+    gap: spacing.sm,
+  },
+  recoveryText: {
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  quotaEmptyText: {
+    color: colors.muted,
+    textAlign: 'center',
+    paddingVertical: spacing.xs,
+  },
+  actionButton: {
+    width: '100%',
+    minHeight: 48,
   },
   unavailableBlock: {
     gap: spacing.sm,
@@ -814,7 +1246,7 @@ const styles = StyleSheet.create({
   calendarHeader: {
     paddingTop: spacing.base,
     paddingBottom: spacing.sm,
-    paddingRight: 52, // 避免覆蓋側邊導覽條
+    paddingRight: 52,
     alignItems: 'center',
   },
   calendarNavRow: {
@@ -826,6 +1258,18 @@ const styles = StyleSheet.create({
   },
   calendarHeaderTitle: {
     color: colors.ink,
+  },
+  calendarStreakRow: {
+    alignItems: 'center',
+    marginVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  calendarStreakText: {
+    color: colors.success,
+  },
+  calendarChallengeInfoText: {
+    color: colors.muted,
+    textAlign: 'center',
   },
   calendarTodayActionRow: {
     marginTop: spacing.xs,
@@ -859,5 +1303,18 @@ const styles = StyleSheet.create({
   monthErrorText: {
     color: colors.rest,
     textAlign: 'center',
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.full,
+    zIndex: 99,
+  },
+  toastText: {
+    color: '#F8FAFC',
   },
 });

@@ -4,7 +4,7 @@ export const DATABASE_NAME = 'burpeejump.db';
 
 export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(`
-    PRAGMA user_version = 2;
+    PRAGMA user_version = 3;
     CREATE TABLE IF NOT EXISTS daily_completions (
       local_date TEXT PRIMARY KEY NOT NULL,
       completed_at TEXT NOT NULL
@@ -29,6 +29,18 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
         CHECK (onboarding_presented IN (0, 1))
     );
     INSERT OR IGNORE INTO onboarding_state (id, onboarding_presented) VALUES (1, 0);
+    CREATE TABLE IF NOT EXISTS challenges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      start_date TEXT NOT NULL,
+      duration_days INTEGER NOT NULL CHECK (duration_days IN (7, 14, 30)),
+      rest_quota INTEGER NOT NULL CHECK (rest_quota IN (1, 2, 3)),
+      settled_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS rest_days (
+      local_date TEXT PRIMARY KEY NOT NULL,
+      challenge_id INTEGER NOT NULL REFERENCES challenges(id),
+      created_at TEXT NOT NULL
+    );
   `);
 }
 

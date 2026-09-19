@@ -177,3 +177,72 @@ export function getNextMonth(
   return { year, month: month + 1 };
 }
 
+/**
+ * 於指定當地日期 (YYYY-MM-DD) 加上指定天數 (可為負數)
+ */
+export function addDays(localDate: string, days: number): string {
+  const [y, m, d] = localDate.split('-').map((v) => parseInt(v, 10));
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return formatLocalDateKey(date);
+}
+
+/**
+ * 取得指定當地日期的前一日 (YYYY-MM-DD)
+ */
+export function getYesterday(localDate: string): string {
+  return addDays(localDate, -1);
+}
+
+/**
+ * 計算兩日期之間的日數差 (toDate - fromDate)
+ */
+export function getDaysDifference(fromDate: string, toDate: string): number {
+  const [y1, m1, d1] = fromDate.split('-').map((v) => parseInt(v, 10));
+  const [y2, m2, d2] = toDate.split('-').map((v) => parseInt(v, 10));
+  const date1 = new Date(y1, m1 - 1, d1);
+  const date2 = new Date(y2, m2 - 1, d2);
+  const diffTime = date2.getTime() - date1.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * 計算連續訓練天數：
+ * - 僅計入已完成日
+ * - 休息日維持連續性但不累加天數
+ * - 無紀錄日中斷連續性
+ * - 今日若待完成，先顯示截至昨天的天數
+ */
+export function calculateStreak(params: {
+  completedDates: Set<string>;
+  restDates: Set<string>;
+  todayKey: string;
+  isTodayCompleted: boolean;
+}): number {
+  const { completedDates, restDates, todayKey, isTodayCompleted } = params;
+  let streak = 0;
+
+  if (isTodayCompleted) {
+    streak += 1;
+  }
+
+  let checkDate = getYesterday(todayKey);
+  // 防止無窮迴圈，最多回溯 1000 天
+  let iterations = 0;
+  while (iterations < 1000) {
+    iterations++;
+    if (completedDates.has(checkDate)) {
+      streak += 1;
+      checkDate = getYesterday(checkDate);
+    } else if (restDates.has(checkDate)) {
+      // 休息日不增加天數，但維持連續性
+      checkDate = getYesterday(checkDate);
+    } else {
+      // 無紀錄日中斷
+      break;
+    }
+  }
+
+  return streak;
+}
+

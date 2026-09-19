@@ -247,9 +247,10 @@ describe('WorkoutScreen (Phase 4 Tabata 計時器)', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    // 再次呼叫 runAsync，且參數（localDate 與 completedAt）完全一致
-    expect(mockRunAsync).toHaveBeenCalledTimes(2);
+    // 再次嘗試儲存（INSERT 與 DELETE FROM rest_days），累計呼叫 3 次（1 次失敗 + 2 次成功）
+    expect(mockRunAsync).toHaveBeenCalledTimes(3);
     expect(mockRunAsync.mock.calls[1]).toEqual(firstCallArgs);
+    expect(mockRunAsync.mock.calls[2][0]).toContain('DELETE FROM rest_days');
 
     // 儲存成功，進入完成狀態
     expect(getByText('訓練完成！')).toBeTruthy();

@@ -36,9 +36,20 @@ const mockDb = {
         music_enabled: 1,
       });
     }
+    if (
+      typeof sql === 'string' &&
+      (sql.includes('rest_days') || sql.includes('challenges'))
+    ) {
+      return Promise.resolve(null);
+    }
     return mockGetFirstAsync(sql, ...args);
   },
-  getAllAsync: (...args: any[]) => mockGetAllAsync(...args),
+  getAllAsync: (sql: string, ...args: any[]) => {
+    if (typeof sql === 'string' && sql.includes('rest_days')) {
+      return Promise.resolve([]);
+    }
+    return mockGetAllAsync(sql, ...args);
+  },
   runAsync: jest.fn().mockResolvedValue({ lastInsertRowId: 1, changes: 1 }),
   execAsync: jest.fn().mockResolvedValue(undefined),
 };

@@ -12,6 +12,10 @@ export interface MonthCalendarProps {
   month: number;
   today?: Date;
   completionsMap?: Record<string, boolean>;
+  restDaysMap?: Record<string, boolean>;
+  challengeStartDate?: string | null;
+  challengeEndDate?: string | null;
+  pendingActionDate?: string | null;
   onSelectDate?: (localDate: string) => void;
 }
 
@@ -20,6 +24,10 @@ export function MonthCalendar({
   month,
   today = new Date(),
   completionsMap = {},
+  restDaysMap = {},
+  challengeStartDate = null,
+  challengeEndDate = null,
+  pendingActionDate = null,
   onSelectDate,
 }: MonthCalendarProps) {
   const cells = useMemo(
@@ -42,19 +50,32 @@ export function MonthCalendar({
 
       {/* 42 格日曆網格 */}
       <View style={styles.grid}>
-        {cells.map((cell) => (
-          <CalendarDay
-            key={cell.localDate}
-            localDate={cell.localDate}
-            day={cell.day}
-            isCurrentMonth={cell.isCurrentMonth}
-            isToday={cell.isToday}
-            isPast={cell.isPast}
-            isFuture={cell.isFuture}
-            isCompleted={!!completionsMap[cell.localDate]}
-            onPress={onSelectDate}
-          />
-        ))}
+        {cells.map((cell) => {
+          const isChallengeRange =
+            !!(
+              challengeStartDate &&
+              challengeEndDate &&
+              cell.localDate >= challengeStartDate &&
+              cell.localDate <= challengeEndDate
+            );
+
+          return (
+            <CalendarDay
+              key={cell.localDate}
+              localDate={cell.localDate}
+              day={cell.day}
+              isCurrentMonth={cell.isCurrentMonth}
+              isToday={cell.isToday}
+              isPast={cell.isPast}
+              isFuture={cell.isFuture}
+              isCompleted={!!completionsMap[cell.localDate]}
+              isRest={!!restDaysMap[cell.localDate]}
+              isChallengeRange={isChallengeRange}
+              hasPendingAction={cell.localDate === pendingActionDate}
+              onPress={onSelectDate}
+            />
+          );
+        })}
       </View>
     </View>
   );

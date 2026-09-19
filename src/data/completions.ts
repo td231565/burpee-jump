@@ -38,15 +38,40 @@ export async function getCompletionsForMonth(
 }
 
 /**
- * 寫入一筆完成紀錄；若已有同日紀錄則 DO NOTHING 保持冪等，保留第一次完成時間
+ * 寫入一筆完成紀錄；若已有同日紀錄則 DO NOTHING 保持冪等，保留第一次完成時間。
+ * 若該日原設有休息日紀錄，於同一筆交易中自動移除該日休息紀錄以退還額度。
  */
 export async function insertCompletion(
   db: SQLiteDatabase,
   localDate: string,
   completedAt: string
 ): Promise<void> {
-  await db.runAsync(
-    'INSERT INTO daily_completions (local_date, completed_at) VALUES (?, ?) ON CONFLICT(local_date) DO NOTHING',
-    [localDate, completedAt]
-  );
+  if (typeof (db as any).withTransactionAsync === 'function') {
+    await (db as any).withTransactionAsync(async () => {
+      await db.runAsync(
+        'INSERT INTO daily_completions (local_date, completed_at) VALUES (?, ?) ON CONFLICT(local_date) DO NOTHING',
+        [localDate, completedAt]
+      );
+      await db.runAsync('DELETE FROM rest_days WHERE local_date = ?', [localDate]);
+    });
+  } else {
+    if (typeof (db as any).execAsync === 'function') {
+      await db.execAsync('BEGIN TRANSACTION;');
+    }
+    try {
+      await db.runAsync(
+        'INSERT INTO daily_completions (local_date, completed_at) VALUES (?, ?) ON CONFLICT(local_date) DO NOTHING',
+        [localDate, completedAt]
+      );
+      await db.runAsync('DELETE FROM rest_days WHERE local_date = ?', [localDate]);
+      if (typeof (db as any).execAsync === 'function') {
+        await db.execAsync('COMMIT;');
+      }
+    } catch (error) {
+      if (typeof (db as any).execAsync === 'function') {
+        await db.execAsync('ROLLBACK;');
+      }
+      throw error;
+    }
+  }
 }
