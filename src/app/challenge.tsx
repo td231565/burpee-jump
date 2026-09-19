@@ -9,11 +9,7 @@ import { Button } from '../components/ui/button';
 import { IconButton } from '../components/ui/icon-button';
 import { NatureBackdrop } from '../components/ui/nature-backdrop';
 import { colors, radius, spacing } from '../theme/tokens';
-import {
-  addDays,
-  formatDetailDate,
-  formatLocalDateKey,
-} from '../features/calendar/date-utils';
+import { formatLocalDateKey } from '../features/calendar/date-utils';
 import {
   createChallenge,
   getDurationQuota,
@@ -27,26 +23,14 @@ export default function ChallengeScreen() {
   const db = useSQLiteContext();
 
   const [selectedDuration, setSelectedDuration] = useState<ChallengeDuration>(7);
-  const [previewStartDate, setPreviewStartDate] = useState(() =>
-    formatLocalDateKey(new Date())
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const previewEndDate = addDays(previewStartDate, selectedDuration - 1);
-  const quota = getDurationQuota(selectedDuration);
 
   const handleStartChallenge = async () => {
     if (!db || isSubmitting) return;
 
-    // 跨午夜或時區變動防呆：若點擊時當地日與預覽不符，僅刷新預覽，不建立
-    const currentKey = formatLocalDateKey(new Date());
-    if (currentKey !== previewStartDate) {
-      setPreviewStartDate(currentKey);
-      return;
-    }
-
     try {
       setIsSubmitting(true);
+      const currentKey = formatLocalDateKey(new Date());
       await createChallenge(db, currentKey, selectedDuration);
       router.back();
     } catch {
@@ -128,32 +112,9 @@ export default function ChallengeScreen() {
             })}
           </View>
 
-          {/* 預覽資訊卡片 */}
-          <View style={styles.previewCard}>
-            <View style={styles.previewRow}>
-              <AppText variant="caption" style={styles.previewLabel}>
-                預計期間
-              </AppText>
-              <AppText variant="body" weight="medium" style={styles.previewValue}>
-                {`${formatDetailDate(previewStartDate)} 至 ${formatDetailDate(previewEndDate)}`}
-              </AppText>
-            </View>
-
-            <View style={styles.previewRow}>
-              <AppText variant="caption" style={styles.previewLabel}>
-                休息額度
-              </AppText>
-              <AppText variant="body" weight="medium" style={styles.previewValue}>
-                {`${quota} 次`}
-              </AppText>
-            </View>
-
-            <View style={styles.noticeContainer}>
-              <AppText variant="caption" style={styles.noticeText}>
-                挑戰開始後，不能中途取消
-              </AppText>
-            </View>
-          </View>
+          <AppText variant="caption" style={styles.noticeText}>
+            挑戰開始後，不能中途取消
+          </AppText>
         </View>
 
         {/* 底部按鈕 */}
@@ -245,30 +206,6 @@ const styles = StyleSheet.create({
   },
   quotaBadgeTextSelected: {
     color: colors.primary,
-  },
-  previewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  previewLabel: {
-    color: colors.muted,
-  },
-  previewValue: {
-    color: colors.ink,
-  },
-  noticeContainer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.sm,
   },
   noticeText: {
     color: colors.work,
