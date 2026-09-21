@@ -179,9 +179,8 @@ export function CalendarDay({
 
 const styles = StyleSheet.create({
   cell: {
-    minWidth: 44,
+    width: '14.2857%',
     minHeight: 44,
-    width: '14.28%',
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',

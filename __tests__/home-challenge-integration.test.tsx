@@ -56,7 +56,7 @@ jest.mock('../src/data/profile', () => ({
   setUserNickname: jest.fn().mockResolvedValue(undefined),
 }));
 
-describe('HomeScreen Phase 2 挑戰週期與休息日整合', () => {
+describe('HomeScreen Phase 2 Additional 挑戰週期與日曆整合', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSearchParams = {};
@@ -68,7 +68,7 @@ describe('HomeScreen Phase 2 挑戰週期與休息日整合', () => {
     jest.restoreAllMocks();
   });
 
-  it('無活躍挑戰時顯示「開始挑戰」按鈕，點擊導航至挑戰建立頁面', async () => {
+  it('無活躍挑戰時，首頁不顯示挑戰入口；日曆頁顯示「設定挑戰週期」，點擊導航至 /challenge', async () => {
     jest.spyOn(challengesData, 'getActiveChallenge').mockResolvedValue(null);
     jest.spyOn(challengesData, 'getUnsettledEndedChallenge').mockResolvedValue(null);
     jest.spyOn(restDaysData, 'getRestDaysForRange').mockResolvedValue([]);
@@ -76,14 +76,22 @@ describe('HomeScreen Phase 2 挑戰週期與休息日整合', () => {
 
     render(<HomeScreen />);
 
-    const createBtn = await screen.findByRole('button', { name: '開始挑戰' });
-    expect(createBtn).toBeTruthy();
+    // 首頁不顯示挑戰建立入口
+    await screen.findByText('今日待完成');
+    expect(screen.queryByRole('button', { name: '開始挑戰' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '設定挑戰週期' })).toBeNull();
 
-    fireEvent.press(createBtn);
+    // 切換至日曆 tab
+    fireEvent.press(screen.getByRole('tab', { name: '日曆' }));
+
+    const setupBtn = await screen.findByRole('button', { name: '設定挑戰週期' });
+    expect(setupBtn).toBeTruthy();
+
+    fireEvent.press(setupBtn);
     expect(mockPush).toHaveBeenCalledWith('/challenge');
   });
 
-  it('有活躍挑戰時顯示挑戰摘要橫幅（天數與剩餘休息）', async () => {
+  it('有活躍挑戰時，日曆卡片頂部顯示「挑戰還有 x 天，可用休息 y 天」，首頁不顯示摘要', async () => {
     const mockChallenge: challengesData.Challenge = {
       id: 1,
       start_date: '2026-09-15',
@@ -107,10 +115,77 @@ describe('HomeScreen Phase 2 挑戰週期與休息日整合', () => {
 
     render(<HomeScreen />);
 
-    expect(await screen.findByText(/挑戰還有 4 天，剩餘休息 1 天/)).toBeTruthy();
+    await screen.findByText('今日待完成');
+
+    // 首頁不顯示挑戰摘要
+    expect(screen.queryByText(/挑戰還有 4 天，可用休息 1 天/)).toBeNull();
+
+    // 切換至日曆 tab
+    fireEvent.press(screen.getByRole('tab', { name: '日曆' }));
+
+    expect(await screen.findByText('挑戰還有 4 天，可用休息 1 天')).toBeTruthy();
+    // 進行中挑戰不顯示設定挑戰週期按鈕
+    expect(screen.queryByRole('button', { name: '設定挑戰週期' })).toBeNull();
   });
 
-  it('今日尚未完成且有剩餘額度時，可點擊「把今天設為休息日」，並直接更新為「取消休息」', async () => {
+  it('challenge 載入失敗進入 unavailable，顯示「暫時無法讀取挑戰資料」與重新載入按鈕', async () => {
+    jest.spyOn(challengesData, 'getActiveChallenge').mockRejectedValue(new Error('Challenge load error'));
+    jest.spyOn(restDaysData, 'getRestDaysForRange').mockResolvedValue([]);
+    jest.spyOn(restDaysData, 'getRestDayByDate').mockResolvedValue(null);
+
+    render(<HomeScreen />);
+
+    const calendarTab = await screen.findByRole('tab', { name: '日曆' });
+    fireEvent.press(calendarTab);
+
+    const retryChallengeBtn = await screen.findByRole('button', { name: '重新載入挑戰資料' });
+    expect(retryChallengeBtn).toBeTruthy();
+    expect(screen.getByText('暫時無法讀取挑戰資料')).toBeTruthy();
+
+    // 模擬重新載入成功為無挑戰
+    jest.spyOn(challengesData, 'getActiveChallenge').mockResolvedValueOnce(null);
+    await act(async () => {
+      fireEvent.press(retryChallengeBtn);
+    });
+
+    expect(await screen.findByRole('button', { name: '設定挑戰週期' })).toBeTruthy();
+  });
+
+  it('challenge 與 streak 失敗互不清空：streak 失敗不影響 challenge 摘要，challenge 失敗不影響 streak', async () => {
+    const mockChallenge: challengesData.Challenge = {
+      id: 1,
+      start_date: '2026-09-15',
+      duration_days: 7,
+      rest_quota: 1,
+      settled_at: null,
+    };
+    jest.spyOn(challengesData, 'getActiveChallenge').mockResolvedValue(mockChallenge);
+    jest.spyOn(challengesData, 'getChallengeSummary').mockResolvedValue({
+      challenge: mockChallenge,
+      startDate: '2026-09-15',
+      endDate: '2026-09-21',
+      remainingDays: 4,
+      remainingRestQuota: 1,
+      isEnded: false,
+      isSettled: false,
+    });
+    // 模擬 streak 查詢失敗
+    jest.spyOn(restDaysData, 'getRestDaysForRange').mockRejectedValue(new Error('Streak records failed'));
+
+    render(<HomeScreen />);
+
+    const calendarTab = await screen.findByRole('tab', { name: '日曆' });
+    fireEvent.press(calendarTab);
+
+    // challenge 仍正常顯示
+    expect(await screen.findByText('挑戰還有 4 天，可用休息 1 天')).toBeTruthy();
+
+    // streak 顯示 unavailable 與獨立重試，不冒充 0 天
+    expect(screen.getByRole('button', { name: '重新載入連續天數' })).toBeTruthy();
+    expect(screen.getByText('暫時無法讀取連續天數')).toBeTruthy();
+  });
+
+  it('今日尚未完成且有剩餘額度時，首頁可點擊「把今天設為休息日」，並更新為「取消休息」', async () => {
     const mockChallenge: challengesData.Challenge = {
       id: 1,
       start_date: '2026-09-15',

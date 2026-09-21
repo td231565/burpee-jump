@@ -16,14 +16,14 @@ export const colors = {
   muted: '#64748B', // 次要說明文字
 
   // 功能角色色彩 (日系果凍 × 柔和陽光)
-  primary: '#0284C7', // 淺藍主要操作
+  primary: '#2A87AD', // 淺藍主要操作
   primaryLight: '#E0F2FE', // 淺藍高光／表面
   primaryBorder: '#BAE6FD', // 淺藍邊框
 
   work: '#E11D48', // 運動階段深粉紅
   workLight: '#FFE4E6', // 運動階段淺粉紅
 
-  rest: '#0284C7', // 休息階段
+  rest: '#2A87AD', // 休息階段
   restLight: '#E0F2FE',
 
   today: '#D97706', // 今天深黃／琥珀

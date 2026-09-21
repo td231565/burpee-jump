@@ -2,19 +2,21 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  Animated,
   AppState,
   type AppStateStatus,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  BackHandler,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Home, Settings } from 'lucide-react-native';
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Home, RotateCw, Settings } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
 import { Button } from '../components/ui/button';
 import { IconButton } from '../components/ui/icon-button';
@@ -66,6 +68,11 @@ import type {
   SettlementOutcome,
 } from '../data/challenge-types';
 
+export type HomeTab = 'home' | 'calendar';
+export type TodayStatus = 'loading' | 'pending' | 'completed' | 'rest' | 'unavailable';
+export type ChallengeStatus = 'loading' | 'none' | 'active' | 'unavailable';
+export type StreakStatus = 'loading' | 'ready' | 'unavailable';
+
 // 記憶體中單次執行提示旗標（不入庫）
 let hasShownSettlementToastInSession = false;
 
@@ -73,22 +80,19 @@ export default function HomeScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
   const params = useLocalSearchParams<{ completedLocalDate?: string }>();
+  const { width } = useWindowDimensions();
 
   const [appState, setAppState] = useState<'loading' | 'onboarding' | 'home'>('loading');
   const [nickname, setNickname] = useState<string | null>(null);
 
-  // 頁面狀態：0 為首頁，1 為日曆
-  const [currentPage, setCurrentPage] = useState<0 | 1>(0);
-  const [pagerHeight, setPagerHeight] = useState<number>(0);
-  const pagerRef = useRef<ScrollView>(null);
+  // 語意導覽分頁狀態
+  const [activeTab, setActiveTab] = useState<HomeTab>('home');
 
   const [todayDate, setTodayDate] = useState(() => new Date());
   const currentKeyRef = useRef(formatLocalDateKey(todayDate));
 
   // 今日狀態：loading | pending | completed | rest | unavailable
-  const [todayStatus, setTodayStatus] = useState<
-    'loading' | 'pending' | 'completed' | 'rest' | 'unavailable'
-  >('loading');
+  const [todayStatus, setTodayStatus] = useState<TodayStatus>('loading');
   const todayTrustedStateRef = useRef<
     Record<string, 'pending' | 'completed' | 'rest'>
   >({});
@@ -99,9 +103,18 @@ export default function HomeScreen() {
   const [restDaysMap, setRestDaysMap] = useState<Record<string, boolean>>({});
   const monthTrustedDataRef = useRef<Record<string, boolean>>({});
 
-  // 挑戰與連續天數狀態
+  // 挑戰與連續天數獨立狀態
+  const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus>('loading');
   const [challengeSummary, setChallengeSummary] = useState<ChallengeSummary | null>(null);
-  const [streak, setStreak] = useState(0);
+  const challengeSummaryRef = useRef<ChallengeSummary | null>(null);
+  useEffect(() => {
+    challengeSummaryRef.current = challengeSummary;
+  }, [challengeSummary]);
+
+  const [streakStatus, setStreakStatus] = useState<StreakStatus>('loading');
+  const [streak, setStreak] = useState<number>(0);
+  const recentRecordsRef = useRef<{ compSet: Set<string>; restSet: Set<string> } | null>(null);
+
   const [isGentleRecovery, setIsGentleRecovery] = useState(false);
   const [pendingActionDate, setPendingActionDate] = useState<string | null>(null);
 
@@ -134,6 +147,93 @@ export default function HomeScreen() {
     music_enabled: true,
   });
 
+  // GO 動畫與 Reduce Motion 狀態
+  const [scaleAnim] = useState(() => new Animated.Value(1));
+  const isLoopRunningRef = useRef(false);
+  const loopAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then((enabled) => {
+        if (isMounted) setReduceMotion(enabled);
+      })
+      .catch(() => {});
+
+    const listener = AccessibilityInfo.addEventListener?.(
+      'reduceMotionChanged',
+      (enabled) => {
+        if (isMounted) setReduceMotion(enabled);
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      listener?.remove?.();
+    };
+  }, []);
+
+  const startBreathing = useCallback(() => {
+    if (isLoopRunningRef.current) return;
+    isLoopRunningRef.current = true;
+    loopAnimationRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.025,
+          duration: 1600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loopAnimationRef.current.start();
+  }, [scaleAnim]);
+
+  const stopBreathing = useCallback(() => {
+    if (loopAnimationRef.current) {
+      loopAnimationRef.current.stop();
+      loopAnimationRef.current = null;
+    }
+    isLoopRunningRef.current = false;
+    scaleAnim.setValue(1);
+  }, [scaleAnim]);
+
+  const isGoVisible =
+    activeTab === 'home' &&
+    (todayStatus === 'pending' || todayStatus === 'rest');
+
+  useEffect(() => {
+    if (isGoVisible && !reduceMotion) {
+      startBreathing();
+    } else {
+      stopBreathing();
+    }
+    return () => {
+      stopBreathing();
+    };
+  }, [isGoVisible, reduceMotion, startBreathing, stopBreathing]);
+
+  // Android 系統返回鍵處理：日曆 tab 先切回首頁並宣告，已在首頁時交給系統預設
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (activeTab === 'calendar') {
+        setActiveTab('home');
+        AccessibilityInfo.announceForAccessibility?.('首頁');
+        return true;
+      }
+      return false;
+    });
+
+    return () => subscription.remove();
+  }, [activeTab]);
+
   const isCurrentMonthView =
     viewYear === todayDate.getFullYear() && viewMonth === todayDate.getMonth() + 1;
 
@@ -145,6 +245,39 @@ export default function HomeScreen() {
       setToastMessage(null);
     }, 3000);
   }, []);
+
+  // 評估溫和復歸與補登日期
+  const evaluateGentleRecovery = useCallback(
+    (
+      summary: ChallengeSummary | null,
+      currentKey: string,
+      records: { compSet: Set<string>; restSet: Set<string> } | null
+    ) => {
+      if (!summary || summary.isEnded || !records) {
+        setIsGentleRecovery(false);
+        setPendingActionDate(null);
+        return;
+      }
+      const yesterdayKey = getYesterday(currentKey);
+      const yesterdayHasRecord =
+        records.compSet.has(yesterdayKey) || records.restSet.has(yesterdayKey);
+      const yesterdayInChallenge =
+        yesterdayKey >= summary.startDate && yesterdayKey <= summary.endDate;
+
+      if (yesterdayInChallenge && !yesterdayHasRecord) {
+        setIsGentleRecovery(true);
+        if (summary.remainingRestQuota > 0) {
+          setPendingActionDate(yesterdayKey);
+        } else {
+          setPendingActionDate(null);
+        }
+      } else {
+        setIsGentleRecovery(false);
+        setPendingActionDate(null);
+      }
+    },
+    []
+  );
 
   // 獨立查詢今日狀態
   const fetchTodayStatus = useCallback(async (database: any, dateKey: string, forceFresh = false) => {
@@ -177,6 +310,60 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // 獨立查詢挑戰資料
+  const fetchChallengeData = useCallback(
+    async (database: any, currentKey: string) => {
+      setChallengeStatus('loading');
+      try {
+        const active = await getActiveChallenge(database, currentKey);
+        if (active) {
+          const summary = await getChallengeSummary(database, active, currentKey);
+          setChallengeSummary(summary);
+          setChallengeStatus(summary && !summary.isEnded ? 'active' : 'none');
+          evaluateGentleRecovery(summary, currentKey, recentRecordsRef.current);
+        } else {
+          setChallengeSummary(null);
+          setChallengeStatus('none');
+          evaluateGentleRecovery(null, currentKey, recentRecordsRef.current);
+        }
+      } catch {
+        setChallengeStatus('unavailable');
+      }
+    },
+    [evaluateGentleRecovery]
+  );
+
+  // 獨立查詢連續訓練天數
+  const fetchStreakData = useCallback(
+    async (database: any, currentKey: string, isCompleted: boolean) => {
+      setStreakStatus('loading');
+      try {
+        const rangeStart = addDays(currentKey, -365);
+        const [comps, rests] = await Promise.all([
+          getCompletionsForMonth(database, rangeStart, currentKey),
+          getRestDaysForRange(database, rangeStart, currentKey),
+        ]);
+        const compSet = new Set(comps.map((c) => c.local_date));
+        const restSet = new Set(rests.map((r) => r.local_date));
+        const records = { compSet, restSet };
+        recentRecordsRef.current = records;
+
+        const streakVal = calculateStreak({
+          completedDates: compSet,
+          restDates: restSet,
+          todayKey: currentKey,
+          isTodayCompleted: isCompleted,
+        });
+        setStreak(streakVal);
+        setStreakStatus('ready');
+        evaluateGentleRecovery(challengeSummaryRef.current, currentKey, records);
+      } catch {
+        setStreakStatus('unavailable');
+      }
+    },
+    [evaluateGentleRecovery]
+  );
+
   // 查詢當月完成與休息紀錄
   const fetchMonthCompletions = useCallback(async (database: any, year: number, month: number) => {
     const monthKey = `${year}-${month}`;
@@ -208,70 +395,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // 查詢挑戰與連續天數
-  const fetchChallengeAndStreak = useCallback(
-    async (database: any, currentKey: string, isCompleted: boolean) => {
-      try {
-        const active = await getActiveChallenge(database, currentKey);
-        let summary: ChallengeSummary | null = null;
-        if (active) {
-          summary = await getChallengeSummary(database, active, currentKey);
-          setChallengeSummary(summary);
-        } else {
-          setChallengeSummary(null);
-        }
-
-        // 計算連續訓練天數 (回溯 365 天)
-        const rangeStart = addDays(currentKey, -365);
-        const [comps, rests] = await Promise.all([
-          getCompletionsForMonth(database, rangeStart, currentKey),
-          getRestDaysForRange(database, rangeStart, currentKey),
-        ]);
-        const compSet = new Set(comps.map((c) => c.local_date));
-        const restSet = new Set(rests.map((r) => r.local_date));
-
-        const streakVal = calculateStreak({
-          completedDates: compSet,
-          restDates: restSet,
-          todayKey: currentKey,
-          isTodayCompleted: isCompleted,
-        });
-        setStreak(streakVal);
-
-        // 溫和復歸與可補登操作檢查
-        const yesterdayKey = getYesterday(currentKey);
-        const yesterdayHasRecord = compSet.has(yesterdayKey) || restSet.has(yesterdayKey);
-
-        if (summary && !summary.isEnded) {
-          const yesterdayInChallenge =
-            yesterdayKey >= summary.startDate && yesterdayKey <= summary.endDate;
-
-          if (yesterdayInChallenge && !yesterdayHasRecord) {
-            setIsGentleRecovery(true);
-            if (summary.remainingRestQuota > 0) {
-              setPendingActionDate(yesterdayKey);
-            } else {
-              setPendingActionDate(null);
-            }
-          } else {
-            setIsGentleRecovery(false);
-            setPendingActionDate(null);
-          }
-        } else {
-          setIsGentleRecovery(false);
-          setPendingActionDate(null);
-        }
-      } catch {
-        setChallengeSummary(null);
-        setStreak(0);
-        setIsGentleRecovery(false);
-        setPendingActionDate(null);
-      }
-    },
-    []
-  );
-
-  // 結算檢查（僅在首頁、非操作中觸發）
+  // 結算檢查（僅在非操作中觸發）
   const checkSettlement = useCallback(
     async (database: any, currentKey: string) => {
       try {
@@ -380,14 +504,16 @@ export default function HomeScreen() {
           setViewMonth(compMonth);
         }
         fetchTodayStatus(db, currentKey, true).then(() => {
-          fetchChallengeAndStreak(db, currentKey, true);
+          fetchChallengeData(db, currentKey);
+          fetchStreakData(db, currentKey, true);
         });
         fetchMonthCompletions(db, targetYear, targetMonth);
         fetchAudioPreferences(db);
         checkSettlement(db, currentKey);
       } else {
         fetchTodayStatus(db, currentKey).then(() => {
-          fetchChallengeAndStreak(
+          fetchChallengeData(db, currentKey);
+          fetchStreakData(
             db,
             currentKey,
             todayTrustedStateRef.current[currentKey] === 'completed'
@@ -400,8 +526,9 @@ export default function HomeScreen() {
     }, [
       db,
       fetchTodayStatus,
+      fetchChallengeData,
+      fetchStreakData,
       fetchMonthCompletions,
-      fetchChallengeAndStreak,
       fetchAudioPreferences,
       checkSettlement,
       params.completedLocalDate,
@@ -418,7 +545,8 @@ export default function HomeScreen() {
           currentKeyRef.current = nowKey;
           setTodayDate(now);
           fetchTodayStatus(db, nowKey, true).then(() => {
-            fetchChallengeAndStreak(
+            fetchChallengeData(db, nowKey);
+            fetchStreakData(
               db,
               nowKey,
               todayTrustedStateRef.current[nowKey] === 'completed'
@@ -439,8 +567,9 @@ export default function HomeScreen() {
     viewYear,
     viewMonth,
     fetchTodayStatus,
+    fetchChallengeData,
+    fetchStreakData,
     fetchMonthCompletions,
-    fetchChallengeAndStreak,
     fetchAudioPreferences,
     checkSettlement,
   ]);
@@ -482,32 +611,25 @@ export default function HomeScreen() {
     });
   };
 
-  const handlePageChange = (targetPage: 0 | 1) => {
-    if (currentPage !== targetPage) {
-      setCurrentPage(targetPage);
-      if (pagerHeight > 0) {
-        pagerRef.current?.scrollTo({
-          y: targetPage * pagerHeight,
-          animated: true,
-        });
-      }
-      AccessibilityInfo.announceForAccessibility?.(
-        targetPage === 0 ? '首頁，第 1 頁，共 2 頁' : '日曆，第 2 頁，共 2 頁'
-      );
-    }
+  const handleReloadStreak = () => {
+    if (!db) return;
+    const currentKey = formatLocalDateKey(todayDate);
+    const isCompleted = todayTrustedStateRef.current[currentKey] === 'completed';
+    fetchStreakData(db, currentKey, isCompleted);
   };
 
-  const handleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (pagerHeight <= 0) return;
-    const offsetY = e.nativeEvent.contentOffset.y;
-    const page = Math.round(offsetY / pagerHeight) as 0 | 1;
-    const targetPage = page >= 1 ? 1 : 0;
-    if (targetPage !== currentPage) {
-      setCurrentPage(targetPage);
-      AccessibilityInfo.announceForAccessibility?.(
-        targetPage === 0 ? '首頁，第 1 頁，共 2 頁' : '日曆，第 2 頁，共 2 頁'
-      );
+  const handleReloadChallenge = () => {
+    if (!db) return;
+    const currentKey = formatLocalDateKey(todayDate);
+    fetchChallengeData(db, currentKey);
+  };
+
+  const handleTabChange = (tab: HomeTab) => {
+    if (activeTab === tab) {
+      // 再次點擊已選取 tab 為 no-op
+      return;
     }
+    setActiveTab(tab);
   };
 
   const handleUpdatePreferences = async (newPrefs: AudioPreferences) => {
@@ -538,7 +660,8 @@ export default function HomeScreen() {
       new Date().toISOString()
     );
     await fetchTodayStatus(db, currentKey, true);
-    await fetchChallengeAndStreak(db, currentKey, false);
+    await fetchChallengeData(db, currentKey);
+    await fetchStreakData(db, currentKey, false);
     await fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
   };
 
@@ -548,7 +671,8 @@ export default function HomeScreen() {
     const currentKey = formatLocalDateKey(todayDate);
     await cancelRestDay(db, currentKey);
     await fetchTodayStatus(db, currentKey, true);
-    await fetchChallengeAndStreak(db, currentKey, false);
+    await fetchChallengeData(db, currentKey);
+    await fetchStreakData(db, currentKey, false);
     await fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
   };
 
@@ -582,7 +706,8 @@ export default function HomeScreen() {
 
     fetchTodayStatus(db, currentKey, true);
     fetchMonthCompletions(db, viewYearRef.current, viewMonthRef.current);
-    fetchChallengeAndStreak(db, currentKey, false);
+    fetchChallengeData(db, currentKey);
+    fetchStreakData(db, currentKey, false);
     return true;
   };
 
@@ -637,69 +762,24 @@ export default function HomeScreen() {
     );
   }
 
+  const goFontSize = Math.min(120, Math.max(88, width * 0.28));
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <NatureBackdrop />
-      <View
-        style={styles.pagerContainer}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          if (h > 0) setPagerHeight(h);
-        }}
-      >
-        {/* 側邊兩段導覽條 - 絕對定位於 pager 右上方 */}
-        <View style={styles.sideNav}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="首頁，第 1 頁，共 2 頁"
-            accessibilityState={{ selected: currentPage === 0 }}
-            style={[
-              styles.navSegment,
-              currentPage === 0 && styles.navSegmentSelected,
-            ]}
-            onPress={() => handlePageChange(0)}
-          >
-            <Home
-              size={20}
-              color={currentPage === 0 ? colors.primary : colors.muted}
-              strokeWidth={currentPage === 0 ? 2.5 : 2}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="日曆，第 2 頁，共 2 頁"
-            accessibilityState={{ selected: currentPage === 1 }}
-            style={[
-              styles.navSegment,
-              currentPage === 1 && styles.navSegmentSelected,
-            ]}
-            onPress={() => handlePageChange(1)}
-          >
-            <Calendar
-              size={20}
-              color={currentPage === 1 ? colors.primary : colors.muted}
-              strokeWidth={currentPage === 1 ? 2.5 : 2}
-            />
-          </Pressable>
-        </View>
-
-        {/* 垂直 Pager */}
-        <ScrollView
-          ref={pagerRef}
-          pagingEnabled
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onMomentumScrollEnd={handleScrollEnd}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+      <View style={styles.mainContainer}>
+        {/* 首頁分頁內容 */}
+        <View
+          style={[styles.tabViewWrapper, activeTab !== 'home' && styles.hiddenTab]}
+          accessibilityElementsHidden={activeTab !== 'home'}
+          importantForAccessibility={activeTab === 'home' ? 'auto' : 'no-hide-descendants'}
         >
-          {/* Page 0: 首頁 */}
-          <View
-            style={[styles.page, pagerHeight > 0 && { height: pagerHeight }]}
-            accessibilityElementsHidden={currentPage !== 0}
-            importantForAccessibility={currentPage === 0 ? 'auto' : 'no-hide-descendants'}
+          <ScrollView
+            style={styles.tabScrollView}
+            contentContainerStyle={styles.homeScrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            {/* 首頁頂部列：左上方並列 BookOpen 與 Settings */}
+            {/* 首頁頂部列：動作教學與設定按鈕 */}
             <View style={styles.homeTopBar}>
               <View style={styles.homeTopActions}>
                 <IconButton
@@ -726,18 +806,9 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
-            {/* 進行中挑戰摘要 */}
-            {challengeSummary && !challengeSummary.isEnded && (
-              <View style={styles.challengeSummaryBanner}>
-                <AppText variant="body" weight="medium" style={styles.challengeSummaryText}>
-                  {`挑戰還有 ${challengeSummary.remainingDays} 天，剩餘休息 ${challengeSummary.remainingRestQuota} 天`}
-                </AppText>
-              </View>
-            )}
-
-            {/* 首頁中間核心區：完整年月日與狀態 */}
+            {/* 首頁中間核心區：無白框卡片，直接位於 NatureBackdrop 上 */}
             <View style={styles.homeCenter}>
-              <View style={styles.todayStatusCard}>
+              <View style={styles.homeCoreContent}>
                 <AppText variant="headline" style={styles.todayDateText}>
                   {formatDetailDate(formatLocalDateKey(todayDate))}
                 </AppText>
@@ -783,10 +854,41 @@ export default function HomeScreen() {
                     </AppText>
                   </View>
                 )}
+
+                {/* 待完成或休息日顯示引導語與大型純文字 GO */}
+                {(todayStatus === 'pending' || todayStatus === 'rest') && (
+                  <>
+                    <AppText variant="body" style={styles.guidanceText}>
+                      準備開始今天的訓練了嗎
+                    </AppText>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="GO，開始今天的 2 分鐘"
+                      onPress={() => router.push('/workout')}
+                      style={[
+                        styles.goPressable,
+                        { minWidth: Math.min(width * 0.5, 200) },
+                      ]}
+                    >
+                      <Animated.Text
+                        style={[
+                          styles.goText,
+                          {
+                            fontSize: goFontSize,
+                            transform: [{ scale: scaleAnim }],
+                          },
+                        ]}
+                      >
+                        GO
+                      </Animated.Text>
+                    </Pressable>
+                  </>
+                )}
               </View>
             </View>
 
-            {/* 首頁底部操作區 */}
+            {/* 首頁底部次要操作區 */}
             <View style={styles.homeFooter}>
               {/* 溫和復歸提示 */}
               {isGentleRecovery && todayStatus === 'pending' && (
@@ -795,65 +897,27 @@ export default function HomeScreen() {
                 </AppText>
               )}
 
-              {todayStatus === 'loading' && (
-                <Button
-                  disabled
-                  variant="disabled"
-                  accessibilityLabel="開始今天的 2 分鐘"
-                >
-                  開始今天的 2 分鐘
-                </Button>
-              )}
-
-              {todayStatus === 'pending' && (
+              {todayStatus === 'pending' && challengeStatus === 'active' && challengeSummary && (
                 <View style={styles.footerActionGroup}>
-                  <Button
-                    variant="primary"
-                    onPress={() => router.push('/workout')}
-                    accessibilityLabel="開始今天的 2 分鐘"
-                    style={styles.actionButton}
-                  >
-                    開始今天的 2 分鐘
-                  </Button>
-
-                  {challengeSummary && !challengeSummary.isEnded ? (
-                    challengeSummary.remainingRestQuota > 0 ? (
-                      <Button
-                        variant="secondary"
-                        onPress={handleSetTodayRest}
-                        accessibilityLabel="把今天設為休息日"
-                        style={styles.actionButton}
-                      >
-                        把今天設為休息日
-                      </Button>
-                    ) : (
-                      <AppText variant="caption" style={styles.quotaEmptyText}>
-                        休息額度已用完
-                      </AppText>
-                    )
-                  ) : (
+                  {challengeSummary.remainingRestQuota > 0 ? (
                     <Button
                       variant="secondary"
-                      onPress={() => router.push('/challenge' as any)}
-                      accessibilityLabel="開始挑戰"
+                      onPress={handleSetTodayRest}
+                      accessibilityLabel="把今天設為休息日"
                       style={styles.actionButton}
                     >
-                      開始挑戰
+                      把今天設為休息日
                     </Button>
+                  ) : (
+                    <AppText variant="caption" style={styles.quotaEmptyText}>
+                      休息額度已用完
+                    </AppText>
                   )}
                 </View>
               )}
 
               {todayStatus === 'rest' && (
                 <View style={styles.footerActionGroup}>
-                  <Button
-                    variant="primary"
-                    onPress={() => router.push('/workout')}
-                    accessibilityLabel="開始今天的 2 分鐘"
-                    style={styles.actionButton}
-                  >
-                    開始今天的 2 分鐘
-                  </Button>
                   <Button
                     variant="secondary"
                     onPress={handleCancelTodayRest}
@@ -868,7 +932,7 @@ export default function HomeScreen() {
               {todayStatus === 'completed' && (
                 <View style={styles.footerActionGroup}>
                   <Button
-                    variant="primary"
+                    variant="secondary"
                     onPress={() =>
                       router.push({
                         pathname: '/workout',
@@ -880,17 +944,6 @@ export default function HomeScreen() {
                   >
                     再做一次
                   </Button>
-
-                  {!challengeSummary || challengeSummary.isEnded ? (
-                    <Button
-                      variant="secondary"
-                      onPress={() => router.push('/challenge' as any)}
-                      accessibilityLabel="開始挑戰"
-                      style={styles.actionButton}
-                    >
-                      開始挑戰
-                    </Button>
-                  ) : null}
                 </View>
               )}
 
@@ -899,7 +952,7 @@ export default function HomeScreen() {
                   <Button
                     variant="primary"
                     onPress={() => {
-                      if (db) fetchTodayStatus(db, formatLocalDateKey(todayDate));
+                      if (db) fetchTodayStatus(db, formatLocalDateKey(todayDate), true);
                     }}
                     accessibilityLabel="重新載入"
                     style={styles.retryButton}
@@ -925,116 +978,235 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </ScrollView>
+        </View>
 
-          {/* Page 1: 日曆 */}
-          <View
-            style={[styles.page, pagerHeight > 0 && { height: pagerHeight }]}
-            accessibilityElementsHidden={currentPage !== 1}
-            importantForAccessibility={currentPage === 1 ? 'auto' : 'no-hide-descendants'}
+        {/* 日曆分頁內容 */}
+        <View
+          style={[styles.tabViewWrapper, activeTab !== 'calendar' && styles.hiddenTab]}
+          accessibilityElementsHidden={activeTab !== 'calendar'}
+          importantForAccessibility={activeTab === 'calendar' ? 'auto' : 'no-hide-descendants'}
+        >
+          <ScrollView
+            style={styles.tabScrollView}
+            contentContainerStyle={styles.calendarScrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            {/* 日曆頂部列：上一月、月份、下一月 */}
-            <View style={styles.calendarHeader}>
-              <View style={styles.calendarNavRow}>
-                <IconButton
-                  onPress={handlePrevMonth}
-                  accessibilityLabel="上一月"
-                >
-                  <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
-                </IconButton>
-                <AppText variant="title" style={styles.calendarHeaderTitle}>
-                  {currentMonthText}
-                </AppText>
-                <IconButton
-                  onPress={handleNextMonth}
-                  accessibilityLabel="下一月"
-                >
-                  <ChevronRight size={24} color={colors.ink} strokeWidth={2} />
-                </IconButton>
-              </View>
-
-              {/* 連續訓練天數與挑戰期間資訊 */}
-              <View style={styles.calendarStreakRow}>
-                <AppText variant="body" weight="bold" style={styles.calendarStreakText}>
-                  {`已連續訓練 ${streak} 天`}
-                </AppText>
-                {challengeSummary && !challengeSummary.isEnded && (
-                  <AppText variant="caption" style={styles.calendarChallengeInfoText}>
-                    {`挑戰期間：${formatDetailDate(challengeSummary.startDate)} 至 ${formatDetailDate(challengeSummary.endDate)}（剩餘休息 ${challengeSummary.remainingRestQuota} 天）`}
-                  </AppText>
-                )}
-              </View>
-
-              {!isCurrentMonthView && (
-                <View style={styles.calendarTodayActionRow}>
-                  <Button
-                    variant="secondary"
-                    onPress={handleBackToToday}
-                    accessibilityLabel="回到今天"
-                    style={styles.todayButton}
-                  >
-                    回到今天
-                  </Button>
-                </View>
-              )}
-            </View>
-
-            {/* 42 格月曆區塊 */}
-            <View style={styles.calendarContent}>
-              {monthStatus === 'unavailable' ? (
-                <View style={styles.monthErrorContainer}>
-                  <AppText variant="body" style={styles.monthErrorText}>
-                    暫時無法讀取月曆紀錄
-                  </AppText>
-                  <Button
-                    variant="secondary"
-                    onPress={() => {
-                      if (db) fetchMonthCompletions(db, viewYear, viewMonth);
-                    }}
-                    accessibilityLabel="重新載入"
-                    style={styles.retryButton}
-                  >
-                    重新載入
-                  </Button>
-                </View>
-              ) : (
-                <View style={styles.monthCalendarWrapper}>
-                  {monthStatus === 'loading' && (
-                    <View
-                      style={styles.calendarLoadingOverlay}
-                      pointerEvents="none"
-                      accessibilityElementsHidden={true}
-                      importantForAccessibility="no-hide-descendants"
-                    >
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                        accessibilityLabel="載入月曆中"
-                      />
-                    </View>
-                  )}
+            {/* 42/35/28 格月曆卡片，卡片頂部包含月份、streak、挑戰摘要與回到今天 */}
+            <View style={styles.calendarCardWrapper}>
+              <View style={styles.monthCalendarWrapper}>
+                {monthStatus === 'loading' && (
                   <View
-                    pointerEvents={monthStatus === 'loading' ? 'none' : 'auto'}
-                    accessibilityElementsHidden={monthStatus === 'loading'}
-                    importantForAccessibility={monthStatus === 'loading' ? 'no-hide-descendants' : 'auto'}
+                    style={styles.calendarLoadingOverlay}
+                    pointerEvents="none"
+                    accessibilityElementsHidden={true}
+                    importantForAccessibility="no-hide-descendants"
                   >
-                    <MonthCalendar
-                      year={viewYear}
-                      month={viewMonth}
-                      today={todayDate}
-                      completionsMap={completionsMap}
-                      restDaysMap={restDaysMap}
-                      challengeStartDate={challengeSummary && !challengeSummary.isEnded ? challengeSummary.startDate : null}
-                      challengeEndDate={challengeSummary && !challengeSummary.isEnded ? challengeSummary.endDate : null}
-                      pendingActionDate={pendingActionDate}
-                      onSelectDate={handleSelectDate}
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.primary}
+                      accessibilityLabel="載入月曆中"
+                    />
+                  </View>
+                )}
+                <View
+                  pointerEvents={monthStatus === 'loading' ? 'none' : 'auto'}
+                  accessibilityElementsHidden={monthStatus === 'loading'}
+                  importantForAccessibility={monthStatus === 'loading' ? 'no-hide-descendants' : 'auto'}
+                >
+                  <MonthCalendar
+                    year={viewYear}
+                    month={viewMonth}
+                    today={todayDate}
+                    completionsMap={completionsMap}
+                    restDaysMap={restDaysMap}
+                    challengeStartDate={challengeStatus === 'active' && challengeSummary ? challengeSummary.startDate : null}
+                    challengeEndDate={challengeStatus === 'active' && challengeSummary ? challengeSummary.endDate : null}
+                    pendingActionDate={pendingActionDate}
+                    onSelectDate={handleSelectDate}
+                    errorContent={
+                      monthStatus === 'unavailable' ? (
+                        <View style={styles.monthErrorContainer}>
+                          <AppText variant="body" style={styles.monthErrorText}>
+                            暫時無法讀取月曆紀錄
+                          </AppText>
+                          <Button
+                            variant="secondary"
+                            onPress={() => {
+                              if (db) fetchMonthCompletions(db, viewYear, viewMonth);
+                            }}
+                            accessibilityLabel="重新載入"
+                            style={styles.retryButton}
+                          >
+                            重新載入
+                          </Button>
+                        </View>
+                      ) : undefined
+                    }
+                    header={
+                        <View style={styles.calendarCardHeader}>
+                          {/* 1. 月份導覽 */}
+                          <View style={styles.calendarNavRow}>
+                            <IconButton
+                              onPress={handlePrevMonth}
+                              accessibilityLabel="上一月"
+                            >
+                              <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
+                            </IconButton>
+                            <AppText variant="title" style={styles.calendarHeaderTitle}>
+                              {currentMonthText}
+                            </AppText>
+                            <IconButton
+                              onPress={handleNextMonth}
+                              accessibilityLabel="下一月"
+                            >
+                              <ChevronRight size={24} color={colors.ink} strokeWidth={2} />
+                            </IconButton>
+                          </View>
+
+                          {/* 2. 連續訓練天數 */}
+                          <View style={styles.calendarStreakRow}>
+                            {streakStatus === 'loading' && (
+                              <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                                accessibilityLabel="載入連續訓練天數"
+                              />
+                            )}
+                            {streakStatus === 'ready' && (
+                              <AppText variant="body" weight="bold" style={styles.calendarStreakText}>
+                                {`已連續訓練 ${streak} 天`}
+                              </AppText>
+                            )}
+                            {streakStatus === 'unavailable' && (
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="重新載入連續天數"
+                                onPress={handleReloadStreak}
+                                style={styles.retryRow}
+                              >
+                                <AppText variant="caption" style={styles.retryRowText}>
+                                  暫時無法讀取連續天數
+                                </AppText>
+                                <RotateCw size={14} color={colors.muted} />
+                              </Pressable>
+                            )}
+                          </View>
+
+                          {/* 3. 進行中挑戰摘要或挑戰錯誤重試 */}
+                          {challengeStatus === 'active' && challengeSummary && (
+                            <View style={styles.calendarChallengeRow}>
+                              <AppText variant="caption" weight="medium" style={styles.calendarChallengeInfoText}>
+                                {`挑戰還有 ${challengeSummary.remainingDays} 天，可用休息 ${challengeSummary.remainingRestQuota} 天`}
+                              </AppText>
+                            </View>
+                          )}
+                          {challengeStatus === 'unavailable' && (
+                            <View style={styles.calendarChallengeRow}>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="重新載入挑戰資料"
+                                onPress={handleReloadChallenge}
+                                style={styles.retryRow}
+                              >
+                                <AppText variant="caption" style={styles.retryRowText}>
+                                  暫時無法讀取挑戰資料
+                                </AppText>
+                                <RotateCw size={14} color={colors.muted} />
+                              </Pressable>
+                            </View>
+                          )}
+
+                          {/* 4. 回到今天（非當月檢視時顯示） */}
+                          {!isCurrentMonthView && (
+                            <View style={styles.calendarTodayActionRow}>
+                              <Button
+                                variant="secondary"
+                                onPress={handleBackToToday}
+                                accessibilityLabel="回到今天"
+                                style={styles.todayButton}
+                              >
+                                回到今天
+                              </Button>
+                            </View>
+                          )}
+                        </View>
+                      }
                     />
                   </View>
                 </View>
-              )}
             </View>
-          </View>
-        </ScrollView>
+
+            {/* 無進行中挑戰時，日曆 ScrollView 中緊接網格後顯示設定挑戰週期按鈕 */}
+            {challengeStatus === 'none' && (
+              <View style={styles.setupChallengeContainer}>
+                <Button
+                  variant="secondary"
+                  onPress={() => router.push('/challenge' as any)}
+                  accessibilityLabel="設定挑戰週期"
+                  style={styles.actionButton}
+                >
+                  設定挑戰週期
+                </Button>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+
+        {/* 固定底部導覽列 */}
+        <View
+          accessibilityRole="tablist"
+          accessible={true}
+          style={styles.bottomNav}
+        >
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityLabel="首頁"
+            accessibilityState={{ selected: activeTab === 'home' }}
+            onPress={() => handleTabChange('home')}
+            style={styles.tabButton}
+          >
+            <Home
+              size={22}
+              color={activeTab === 'home' ? colors.primary : colors.muted}
+              strokeWidth={activeTab === 'home' ? 2.5 : 2}
+            />
+            <AppText
+              variant="caption"
+              weight={activeTab === 'home' ? 'bold' : 'medium'}
+              style={[
+                styles.tabText,
+                { color: activeTab === 'home' ? colors.primary : colors.muted },
+              ]}
+            >
+              首頁
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityLabel="日曆"
+            accessibilityState={{ selected: activeTab === 'calendar' }}
+            onPress={() => handleTabChange('calendar')}
+            style={styles.tabButton}
+          >
+            <Calendar
+              size={22}
+              color={activeTab === 'calendar' ? colors.primary : colors.muted}
+              strokeWidth={activeTab === 'calendar' ? 2.5 : 2}
+            />
+            <AppText
+              variant="caption"
+              weight={activeTab === 'calendar' ? 'bold' : 'medium'}
+              style={[
+                styles.tabText,
+                { color: activeTab === 'calendar' ? colors.primary : colors.muted },
+              ]}
+            >
+              日曆
+            </AppText>
+          </Pressable>
+        </View>
 
         {/* 非阻擋式 Toast */}
         {toastMessage && (
@@ -1093,49 +1265,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pagerContainer: {
+  mainContainer: {
     flex: 1,
     position: 'relative',
   },
-  scrollView: {
+  tabViewWrapper: {
     flex: 1,
   },
-  scrollContent: {
+  hiddenTab: {
+    display: 'none',
+  },
+  tabScrollView: {
+    flex: 1,
+  },
+  homeScrollContent: {
     flexGrow: 1,
-  },
-  page: {
-    flex: 1,
-    paddingHorizontal: spacing.base,
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
   },
-  sideNav: {
-    position: 'absolute',
-    top: spacing.base,
-    right: spacing.base,
-    zIndex: 10,
-    flexDirection: 'column',
-    gap: spacing.xs,
-    alignItems: 'center',
-  },
-  navSegment: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  navSegmentSelected: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(56, 102, 65, 0.08)',
+  calendarScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
   },
   homeTopBar: {
     paddingTop: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: 52,
+    justifyContent: 'flex-start',
   },
   homeTopActions: {
     flexDirection: 'row',
@@ -1153,44 +1312,28 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
   },
-  challengeSummaryBanner: {
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.base,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  challengeSummaryText: {
-    color: colors.ink,
-  },
   homeCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.lg,
+    minHeight: 240,
   },
-  todayStatusCard: {
+  homeCoreContent: {
     width: '100%',
-    maxWidth: 320,
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    justifyContent: 'center',
   },
   todayDateText: {
     color: colors.ink,
-    marginBottom: spacing.base,
+    marginBottom: spacing.xs,
     textAlign: 'center',
   },
   statusRow: {
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   pendingStatusText: {
     color: colors.work,
@@ -1208,9 +1351,29 @@ const styles = StyleSheet.create({
     color: colors.rest,
     fontWeight: '600',
   },
+  guidanceText: {
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  goPressable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    minHeight: 88,
+  },
+  goText: {
+    color: colors.primary, // #2A87AD
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(42, 135, 173, 0.28)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 16,
+  },
   homeFooter: {
     paddingVertical: spacing.base,
-    paddingBottom: spacing.lg,
   },
   footerActionGroup: {
     gap: spacing.sm,
@@ -1243,11 +1406,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.sm,
   },
-  calendarHeader: {
-    paddingTop: spacing.base,
-    paddingBottom: spacing.sm,
-    paddingRight: 52,
-    alignItems: 'center',
+  calendarCardWrapper: {
+    width: '100%',
+  },
+  calendarCardHeader: {
+    paddingBottom: spacing.xs,
   },
   calendarNavRow: {
     flexDirection: 'row',
@@ -1255,37 +1418,60 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: spacing.xs,
+    marginBottom: spacing.xs,
   },
   calendarHeaderTitle: {
     color: colors.ink,
   },
   calendarStreakRow: {
     alignItems: 'center',
-    marginVertical: spacing.xs,
-    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 28,
+    marginVertical: 2,
   },
   calendarStreakText: {
     color: colors.success,
+  },
+  calendarChallengeRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 24,
+    marginVertical: 2,
   },
   calendarChallengeInfoText: {
     color: colors.muted,
     textAlign: 'center',
   },
+  retryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  retryRowText: {
+    color: colors.muted,
+  },
   calendarTodayActionRow: {
-    marginTop: spacing.xs,
+    alignItems: 'center',
+    marginVertical: spacing.xs,
   },
   todayButton: {
-    minHeight: 44,
+    minHeight: 40,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.base,
   },
-  calendarContent: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingBottom: spacing.lg,
-  },
   monthCalendarWrapper: {
     position: 'relative',
+  },
+  monthErrorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   calendarLoadingOverlay: {
     ...StyleSheet.absoluteFill,
@@ -1304,9 +1490,31 @@ const styles = StyleSheet.create({
     color: colors.rest,
     textAlign: 'center',
   },
+  setupChallengeContainer: {
+    marginTop: spacing.base,
+    width: '100%',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    minHeight: 52,
+    borderTopWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: spacing.xs,
+  },
+  tabButton: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabText: {
+    marginTop: 2,
+  },
   toastContainer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 64,
     alignSelf: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.9)',
     paddingVertical: spacing.sm,

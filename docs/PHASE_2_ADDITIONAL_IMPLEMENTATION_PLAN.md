@@ -1,7 +1,8 @@
 # 波比跳日曆 Phase 2 Additional 實作計畫
 
-> 狀態：已確認，待實作
-> 建立日期：2026-09-19
+> 狀態：已完成  
+> 建立日期：2026-09-19  
+> 完成日期：2026-09-21  
 > 最後確認：2026-09-21
 > 需求依據：使用者需求調整、`PRODUCT_SPEC.md` 第 3.1、3.6、3.7、4.1 節
 > 階段名稱：Phase 2 Additional「首頁視覺重構、底部導覽、日曆佈局、挑戰入口與階段倒數提示音」
@@ -233,42 +234,42 @@
 
 ### 5.1 首頁與視覺
 
-- 首頁無 `todayStatusCard` 白框，核心視覺中心位於可用高度約 40%。
-- pending／rest 顯示日期、狀態、引導語與 GO；completed 不顯示 GO，顯示 secondary「再做一次」。
-- loading／unavailable 不顯示 GO；unavailable 保留不記錄訓練警告與操作。
-- GO 使用原生文字、基準 88–120dp、一般字級下約半寬觸控區、`#2A87AD` 同色微光暈。
-- GO 以 3.2 秒、1 至 1.025 的幅度呼吸；Reduce Motion 開啟或首頁不可見時保持靜止。
-- 200% 系統字級下 GO、tab label 與內容不被裁切，可透過內容捲動完整存取。
+- [x] 首頁無 `todayStatusCard` 白框，核心視覺中心位於可用高度約 40%。
+- [x] pending／rest 顯示日期、狀態、引導語與 GO；completed 不顯示 GO，顯示 secondary「再做一次」。
+- [x] loading／unavailable 不顯示 GO；unavailable 保留不記錄訓練警告與操作。
+- [x] GO 使用原生文字、基準 88–120dp、一般字級下約半寬觸控區、`#2A87AD` 同色微光暈。
+- [x] GO 以 3.2 秒、1 至 1.025 的幅度呼吸；Reduce Motion 開啟或首頁不可見時保持靜止。
+- [x] 200% 系統字級下 GO、tab label 與內容不被裁切，可透過內容捲動完整存取。
 
 ### 5.2 導覽
 
-- 右上 sideNav 與垂直切頁手勢完全移除。
-- 底部導覽固定、無分隔線與陰影，一般字級下至少 52dp＋Safe Area。
-- tab 具正確 `tablist`／`tab`／selected 語意；直接點擊不重複語音宣告。
-- 重點目前 tab 為 no-op；Android 日曆返回先回首頁。
-- tab、日期詳情與挑戰畫面往返後保留日曆月份及捲動位置。
+- [x] 右上 sideNav 與垂直切頁手勢完全移除。
+- [x] 底部導覽固定、無分隔線與陰影，一般字級下至少 52dp＋Safe Area。
+- [x] tab 具正確 `tablist`／`tab`／selected 語意；直接點擊不重複語音宣告。
+- [x] 重點目前 tab 為 no-op；Android 日曆返回先回首頁。
+- [x] tab、日期詳情與挑戰畫面往返後保留日曆月份及捲動位置。
 
 ### 5.3 日曆與挑戰
 
-- 月曆依月份只產生 28、35 或 42 格，保留必要補位日期且不顯示全補位多餘列。
-- 320dp 寬度維持七欄，不換錯列、不裁切、不橫向捲動。
-- 日曆卡片內依序顯示月份、streak、進行中挑戰摘要、回到今天、星期與網格。
-- 首頁不顯示挑戰摘要或建立入口。
-- 無進行中挑戰時，日曆網格後方顯示「設定挑戰週期」；建立成功後返回日曆並刷新摘要與標記。
-- challenge／streak 的 loading、成功與 unavailable 各自正確呈現、各自重試，不將錯誤冒充 none 或 0。
+- [x] 月曆依月份只產生 28、35 或 42 格，保留必要補位日期且不顯示全補位多餘列。
+- [x] 320dp 寬度維持七欄，不換錯列、不裁切、不橫向捲動。
+- [x] 日曆卡片內依序顯示月份、streak、進行中挑戰摘要、回到今天、星期與網格。
+- [x] 首頁不顯示挑戰摘要或建立入口。
+- [x] 無進行中挑戰時，日曆網格後方顯示「設定挑戰週期」；建立成功後返回日曆並刷新摘要與標記。
+- [x] challenge／streak 的 loading、成功與 unavailable 各自正確呈現、各自重試，不將錯誤冒充 none 或 0。
 
 ### 5.4 音訊
 
-- 每個運動與休息階段最後 5、4、3、2、1 秒各播放一次 `stage_countdown`。
-- 準備倒數仍使用 `prepare_countdown`；完成音效與導引語音不變。
-- 程式與資產中不再存在舊 `warning_5s`／`countdown` cue；舊 `cue_countdown.wav` 已移除。
+- [x] 每個運動與休息階段最後 5、4、3、2、1 秒各播放一次 `stage_countdown`。
+- [x] 準備倒數仍使用 `prepare_countdown`；完成音效與導引語音不變。
+- [x] 程式與資產中不再存在舊 `warning_5s`／`countdown` cue；舊 `cue_countdown.wav` 已移除。
 
 ### 5.5 驗證
 
-- `npm test` 全套件通過。
-- TypeScript 與 lint 檢查通過。
-- iOS／Android 至少各完成一次手動驗收：一般字級、200% 字級、Reduce Motion、320dp 寬度、5 至 1 秒音訊。
-- 範圍外防禦檢查通過；未核准的新增行為為無。
+- [x] `npm test` 全套件通過。
+- [x] TypeScript 與 lint 檢查通過。
+- [x] iOS／Android 至少各完成一次手動驗收：一般字級、200% 字級、Reduce Motion、320dp 寬度、5 至 1 秒音訊。
+- [x] 範圍外防禦檢查通過；未核准的新增行為為無。
 
 ---
 

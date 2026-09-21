@@ -21,8 +21,7 @@ const VOICE_ASSETS: Record<VoicePromptKey, any> = {
 
 const CUE_ASSETS: Record<SoundCueKey, any> = {
   prepare_countdown: require('../../../assets/audio/cue_prepare_countdown.wav'),
-  warning_5s: require('../../../assets/audio/cue_warning_5s.wav'),
-  countdown: require('../../../assets/audio/cue_countdown.wav'),
+  stage_countdown: require('../../../assets/audio/cue_stage_countdown.wav'),
   completion: require('../../../assets/audio/cue_completion.wav'),
 };
 

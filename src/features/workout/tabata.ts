@@ -43,8 +43,7 @@ export type VoicePromptKey =
 
 export type SoundCueKey =
   | 'prepare_countdown'
-  | 'warning_5s'
-  | 'countdown'
+  | 'stage_countdown'
   | 'completion';
 
 export function deriveTabataSnapshot(elapsedTotalMs: number): TabataSnapshot {
@@ -133,12 +132,12 @@ function buildScheduledCues(): ScheduledEvent<SoundCueKey>[] {
   let currentStartMs = PREPARE_DURATION_MS;
   for (const stage of TABATA_STAGES) {
     const duration = stage.durationSeconds;
-    // 5s warning
-    cues.push({ timeMs: currentStartMs + (duration - 5) * 1000, event: 'warning_5s' });
-    // 3, 2, 1 countdown
-    cues.push({ timeMs: currentStartMs + (duration - 3) * 1000, event: 'countdown' });
-    cues.push({ timeMs: currentStartMs + (duration - 2) * 1000, event: 'countdown' });
-    cues.push({ timeMs: currentStartMs + (duration - 1) * 1000, event: 'countdown' });
+    for (let remaining = 5; remaining >= 1; remaining -= 1) {
+      cues.push({
+        timeMs: currentStartMs + (duration - remaining) * 1000,
+        event: 'stage_countdown',
+      });
+    }
 
     currentStartMs += duration * 1000;
   }

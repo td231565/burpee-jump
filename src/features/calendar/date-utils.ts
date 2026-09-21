@@ -117,7 +117,7 @@ export interface CalendarCell {
 }
 
 /**
- * 產生指定月份的 42 格日曆資料 (6 週 × 7 天，週一為每週第一天)
+ * 產生指定月份的日曆資料 (最少完整週網格：28、35 或 42 格，週一為每週第一天)
  */
 export function generateMonthGrid(
   year: number,
@@ -127,9 +127,11 @@ export function generateMonthGrid(
   const todayKey = formatLocalDateKey(today);
   const firstOfMonth = new Date(year, month - 1, 1);
   const leadingDays = (firstOfMonth.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const totalCells = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
 
   const cells: CalendarCell[] = [];
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < totalCells; i++) {
     const cellDate = new Date(year, month - 1, 1 - leadingDays + i);
     const localDate = formatLocalDateKey(cellDate);
     const isCurrentMonth =

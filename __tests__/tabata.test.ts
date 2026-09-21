@@ -125,22 +125,31 @@ describe('Tabata Timing Derivation (Seam 2)', () => {
     expect(eventsComplete.cues).toContain('completion');
   });
 
-  it('音訊與語音事件：各運動與休息階段剩餘 5 秒發出預警音，最後 3、2、1 秒發出倒數音', () => {
+  it('音訊與語音事件：各運動與休息階段剩餘 5、4、3、2、1 秒皆發出 stage_countdown 提示音，不出現舊提示音', () => {
     // Round 1 work 20s (3000ms ~ 23000ms)
     // 剩餘 5 秒為 15 秒已過 = 18000ms
-    const eventsWarning = getTabataEvents(17900, 18000);
-    expect(eventsWarning.cues).toContain('warning_5s');
+    const eventsCountdown5 = getTabataEvents(17900, 18000);
+    expect(eventsCountdown5.cues).toContain('stage_countdown');
+
+    // 剩餘 4 秒 = 19000ms
+    const eventsCountdown4 = getTabataEvents(18900, 19000);
+    expect(eventsCountdown4.cues).toContain('stage_countdown');
 
     // 剩餘 3 秒 = 20000ms
     const eventsCountdown3 = getTabataEvents(19900, 20000);
-    expect(eventsCountdown3.cues).toContain('countdown');
+    expect(eventsCountdown3.cues).toContain('stage_countdown');
 
     // 剩餘 2 秒 = 21000ms
     const eventsCountdown2 = getTabataEvents(20900, 21000);
-    expect(eventsCountdown2.cues).toContain('countdown');
+    expect(eventsCountdown2.cues).toContain('stage_countdown');
 
     // 剩餘 1 秒 = 22000ms
     const eventsCountdown1 = getTabataEvents(21900, 22000);
-    expect(eventsCountdown1.cues).toContain('countdown');
+    expect(eventsCountdown1.cues).toContain('stage_countdown');
+
+    // 全程不應包含舊 warning_5s 或 countdown
+    const allEvents = getTabataEvents(0, 120000);
+    expect((allEvents.cues as string[])).not.toContain('warning_5s');
+    expect((allEvents.cues as string[])).not.toContain('countdown');
   });
 });

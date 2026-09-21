@@ -57,11 +57,11 @@ describe('日期純函式 (Seam 1)', () => {
   });
 
   describe('generateMonthGrid (Seam 1)', () => {
-    it('產生固定 42 格，星期一為每週第一天 (2026 年 9 月)', () => {
+    it('依月份採最少完整週契約產生 35 格 (2026 年 9 月，5 週)', () => {
       const today = new Date(2026, 8, 9); // 2026-09-09
       const grid = generateMonthGrid(2026, 9, today);
 
-      expect(grid).toHaveLength(42);
+      expect(grid).toHaveLength(35);
 
       // 9 月 1 日為週二，第 1 格為 8 月 31 日 (週一，非本月補位)
       expect(grid[0]).toEqual({
@@ -99,10 +99,10 @@ describe('日期純函式 (Seam 1)', () => {
       expect(futureCell?.isFuture).toBe(true);
       expect(futureCell?.isPast).toBe(false);
 
-      // 最後一格 (第 42 格) 為 10 月 11 日 (非本月補位)
-      expect(grid[41]).toEqual({
-        localDate: '2026-10-11',
-        day: 11,
+      // 最後一格 (第 35 格) 為 10 月 4 日 (非本月補位，週日)
+      expect(grid[34]).toEqual({
+        localDate: '2026-10-04',
+        day: 4,
         isCurrentMonth: false,
         isToday: false,
         isPast: false,
@@ -110,15 +110,43 @@ describe('日期純函式 (Seam 1)', () => {
       });
     });
 
-    it('1 號為週一的情形 (2026 年 6 月，前面不需補上月)', () => {
-      const today = new Date(2026, 5, 15);
-      const grid = generateMonthGrid(2026, 6, today);
-      expect(grid).toHaveLength(42);
-      expect(grid[0].localDate).toBe('2026-06-01');
+    it('產生 28 格的最少完整週 (2021 年 2 月，平年且 1 號為週一，剛好 4 週)', () => {
+      const today = new Date(2021, 1, 10);
+      const grid = generateMonthGrid(2021, 2, today);
+      expect(grid).toHaveLength(28);
+      expect(grid[0].localDate).toBe('2021-02-01');
       expect(grid[0].isCurrentMonth).toBe(true);
+      expect(grid[27].localDate).toBe('2021-02-28');
+      expect(grid[27].isCurrentMonth).toBe(true);
     });
 
-    it('1 號為週日的情形 (2026 年 11 月，前面需補 6 天)', () => {
+    it('產生 42 格的最少完整週 (2026 年 8 月，1 號為週六且有 31 天，需 6 週)', () => {
+      const today = new Date(2026, 7, 15);
+      const grid = generateMonthGrid(2026, 8, today);
+      expect(grid).toHaveLength(42);
+      expect(grid[0].localDate).toBe('2026-07-27'); // 補位週一
+      expect(grid[0].isCurrentMonth).toBe(false);
+      expect(grid[5].localDate).toBe('2026-08-01'); // 本月第一天週六
+      expect(grid[5].isCurrentMonth).toBe(true);
+      expect(grid[35].localDate).toBe('2026-08-31'); // 本月最後一天週一
+      expect(grid[35].isCurrentMonth).toBe(true);
+      expect(grid[41].localDate).toBe('2026-09-06'); // 補位週日
+      expect(grid[41].isCurrentMonth).toBe(false);
+    });
+
+    it('1 號為週一但有 30 天的情形 (2026 年 6 月，產生 35 格)', () => {
+      const today = new Date(2026, 5, 15);
+      const grid = generateMonthGrid(2026, 6, today);
+      expect(grid).toHaveLength(35);
+      expect(grid[0].localDate).toBe('2026-06-01');
+      expect(grid[0].isCurrentMonth).toBe(true);
+      expect(grid[29].localDate).toBe('2026-06-30');
+      expect(grid[29].isCurrentMonth).toBe(true);
+      expect(grid[34].localDate).toBe('2026-07-05');
+      expect(grid[34].isCurrentMonth).toBe(false);
+    });
+
+    it('1 號為週日的情形 (2026 年 11 月，前面需補 6 天，產生 42 格)', () => {
       const today = new Date(2026, 10, 15);
       const grid = generateMonthGrid(2026, 11, today);
       expect(grid).toHaveLength(42);
@@ -128,10 +156,10 @@ describe('日期純函式 (Seam 1)', () => {
       expect(grid[6].isCurrentMonth).toBe(true);
     });
 
-    it('閏年二月 (2024 年 2 月，29 天)', () => {
+    it('閏年二月 (2024 年 2 月，29 天，產生 35 格)', () => {
       const today = new Date(2024, 1, 10);
       const grid = generateMonthGrid(2024, 2, today);
-      expect(grid).toHaveLength(42);
+      expect(grid).toHaveLength(35);
       const feb29 = grid.find((cell) => cell.localDate === '2024-02-29');
       expect(feb29).toBeDefined();
       expect(feb29?.isCurrentMonth).toBe(true);

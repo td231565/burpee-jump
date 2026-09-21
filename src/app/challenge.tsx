@@ -46,7 +46,7 @@ export default function ChallengeScreen() {
         <View style={styles.header}>
           <IconButton
             onPress={() => router.back()}
-            accessibilityLabel="返回首頁"
+            accessibilityLabel="返回日曆"
           >
             <ChevronLeft size={24} color={colors.ink} strokeWidth={2} />
           </IconButton>

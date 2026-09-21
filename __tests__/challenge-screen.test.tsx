@@ -41,6 +41,14 @@ describe('ChallengeScreen (Slice 1)', () => {
     expect(screen.getByText('14 天')).toBeTruthy();
     expect(screen.getByText('30 天')).toBeTruthy();
     expect(screen.getByText('挑戰開始後，不能中途取消')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '返回日曆' })).toBeTruthy();
+  });
+
+  it('點擊返回日曆按鈕返回日曆', () => {
+    render(<ChallengeScreen />);
+    const backBtn = screen.getByRole('button', { name: '返回日曆' });
+    fireEvent.press(backBtn);
+    expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
   it('選取不同週期時以對應天數建立挑戰', async () => {

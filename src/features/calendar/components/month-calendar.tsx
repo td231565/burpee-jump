@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText } from '../../../components/ui/app-text';
 import { colors, radius, spacing } from '../../../theme/tokens';
 import { generateMonthGrid } from '../date-utils';
@@ -17,6 +17,8 @@ export interface MonthCalendarProps {
   challengeEndDate?: string | null;
   pendingActionDate?: string | null;
   onSelectDate?: (localDate: string) => void;
+  header?: React.ReactNode;
+  errorContent?: React.ReactNode;
 }
 
 export function MonthCalendar({
@@ -29,27 +31,37 @@ export function MonthCalendar({
   challengeEndDate = null,
   pendingActionDate = null,
   onSelectDate,
+  header,
+  errorContent,
 }: MonthCalendarProps) {
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 360;
+
   const cells = useMemo(
     () => generateMonthGrid(year, month, today),
     [year, month, today]
   );
 
   return (
-    <View style={styles.container}>
-      {/* 星期列表頭 (週一至週日) */}
-      <View style={styles.weekHeader}>
-        {WEEK_DAYS.map((dayName) => (
-          <View key={dayName} style={styles.weekDayHeaderCell}>
-            <AppText variant="caption" weight="medium" style={styles.weekDayText}>
-              {dayName}
-            </AppText>
+    <View style={[styles.container, isNarrow && styles.containerNarrow]}>
+      {header}
+      {errorContent ? (
+        errorContent
+      ) : (
+        <>
+          {/* 星期列表頭 (週一至週日) */}
+          <View style={styles.weekHeader}>
+            {WEEK_DAYS.map((dayName) => (
+              <View key={dayName} style={styles.weekDayHeaderCell}>
+                <AppText variant="caption" weight="medium" style={styles.weekDayText}>
+                  {dayName}
+                </AppText>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
 
-      {/* 42 格日曆網格 */}
-      <View style={styles.grid}>
+          {/* 動態 28 / 35 / 42 格日曆網格 */}
+          <View style={styles.grid}>
         {cells.map((cell) => {
           const isChallengeRange =
             !!(
@@ -77,8 +89,10 @@ export function MonthCalendar({
           );
         })}
       </View>
-    </View>
-  );
+    </>
+  )}
+</View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -95,16 +109,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  containerNarrow: {
+    padding: spacing.xs,
+  },
   weekHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingBottom: spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     marginBottom: spacing.xs,
   },
   weekDayHeaderCell: {
-    width: '14.28%',
+    width: '14.2857%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.xs,

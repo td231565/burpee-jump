@@ -70,6 +70,19 @@ describe('TabataAudioService (Seam 5)', () => {
     expect(mockSetIsAudioActiveAsync).toHaveBeenCalledWith(false);
   });
 
+  it('播放提示音時，stage_countdown 可正常 seekTo(0) 並 play', async () => {
+    const service = new TabataAudioService();
+    await service.initialize({
+      voice_enabled: true,
+      cues_enabled: true,
+      music_enabled: false,
+    });
+
+    await service.playCue('stage_countdown');
+    expect(mockSeekTo).toHaveBeenCalledWith(0);
+    expect(mockPlay).toHaveBeenCalled();
+  });
+
   it('取消或釋放時停止所有音訊並釋放資源', async () => {
     const service = new TabataAudioService();
     await service.initialize({
