@@ -31,8 +31,7 @@ describe('SettingsModal Component (Slice 5)', () => {
       expect(getByText('設定')).toBeTruthy();
       expect(getByText('個人資料')).toBeTruthy();
       expect(getByText('音訊')).toBeTruthy();
-      expect(getByText('導引語音')).toBeTruthy();
-      expect(getByText('提示音效')).toBeTruthy();
+      expect(getByText('提示語音')).toBeTruthy();
       expect(getByText('背景音樂')).toBeTruthy();
     });
   });
@@ -49,7 +48,7 @@ describe('SettingsModal Component (Slice 5)', () => {
     });
   });
 
-  it('切換音訊開關時立即觸發 onUpdatePreferences', async () => {
+  it('切換提示語音開關時同步更新 voice_enabled 與 cues_enabled', async () => {
     const onUpdatePrefs = jest.fn();
     const { getByLabelText, getByDisplayValue } = render(
       <SettingsModal {...defaultProps} onUpdatePreferences={onUpdatePrefs} />
@@ -59,14 +58,15 @@ describe('SettingsModal Component (Slice 5)', () => {
       expect(getByDisplayValue('小明')).toBeTruthy();
     });
 
-    const voiceSwitch = getByLabelText('導引語音');
+    const promptSwitch = getByLabelText('提示語音');
     await act(async () => {
-      fireEvent(voiceSwitch, 'valueChange', false);
+      fireEvent(promptSwitch, 'valueChange', false);
     });
 
     expect(onUpdatePrefs).toHaveBeenCalledWith({
       ...defaultPrefs,
       voice_enabled: false,
+      cues_enabled: false,
     });
   });
 
@@ -109,7 +109,7 @@ describe('SettingsModal Component (Slice 5)', () => {
 
   it('清空既有暱稱並點擊更新，傳入 null 儲存', async () => {
     const onUpdateNickname = jest.fn().mockResolvedValue(undefined);
-    const { getByText, getByPlaceholderText } = render(
+    const { getByRole, getByPlaceholderText } = render(
       <SettingsModal {...defaultProps} onUpdateNickname={onUpdateNickname} />
     );
 
@@ -119,7 +119,7 @@ describe('SettingsModal Component (Slice 5)', () => {
 
     fireEvent.changeText(getByPlaceholderText('輸入暱稱'), '   ');
 
-    const updateBtn = getByText('更新暱稱');
+    const updateBtn = getByRole('button', { name: '更新暱稱' });
     await act(async () => {
       fireEvent.press(updateBtn);
     });
@@ -129,7 +129,7 @@ describe('SettingsModal Component (Slice 5)', () => {
 
   it('儲存暱稱失敗時顯示「暱稱未能儲存，請再試一次」，並保留輸入內容', async () => {
     const onUpdateNicknameFail = jest.fn().mockRejectedValue(new Error('Save failed'));
-    const { getByText, getByPlaceholderText } = render(
+    const { getByText, getByPlaceholderText, getByRole } = render(
       <SettingsModal {...defaultProps} onUpdateNickname={onUpdateNicknameFail} />
     );
 
@@ -138,7 +138,7 @@ describe('SettingsModal Component (Slice 5)', () => {
     });
 
     fireEvent.changeText(getByPlaceholderText('輸入暱稱'), '小華');
-    const updateBtn = getByText('更新暱稱');
+    const updateBtn = getByRole('button', { name: '更新暱稱' });
 
     await act(async () => {
       fireEvent.press(updateBtn);

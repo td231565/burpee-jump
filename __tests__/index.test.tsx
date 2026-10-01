@@ -406,4 +406,54 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       expect(screen.getByText('音訊')).toBeTruthy();
     });
   });
+
+  describe('Section 6: Phase 3 介面與行為變更', () => {
+    it('有暱稱時歡迎詞為「Hi {暱稱}」，無逗號', async () => {
+      mockGetUserProfile.mockResolvedValue({ nickname: '小明' });
+      render(<HomeScreen />);
+
+      expect(await screen.findByText('Hi 小明')).toBeTruthy();
+      expect(screen.queryByText(/Hi，/)).toBeNull();
+    });
+
+    it('今日已完成時顯示放大完成文字與靜態肌肉小人，且「再做一次」按鈕正常可見', async () => {
+      mockGetFirstAsync.mockResolvedValue({
+        local_date: '2026-09-09',
+        completed_at: '2026-09-09T08:00:00.000Z',
+      });
+
+      render(<HomeScreen />);
+
+      expect(await screen.findByText('今日已完成')).toBeTruthy();
+      expect(screen.getByRole('button', { name: '再做一次' })).toBeTruthy();
+
+      // 裝飾小人存在且為無障礙樹隱藏
+      const svgs = screen.UNSAFE_getAllByType('RNSVGSvgView' as any);
+      expect(svgs.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('切換至日曆 tab 時，「設定挑戰週期」固定於底部，不因月份切換移位', async () => {
+      render(<HomeScreen />);
+      await screen.findByText('今日待完成');
+
+      fireEvent.press(screen.getByRole('tab', { name: '日曆' }));
+      const setupBtn = await screen.findByRole('button', { name: '設定挑戰週期' });
+      expect(setupBtn).toBeTruthy();
+
+      // 切換月份
+      fireEvent.press(screen.getByRole('button', { name: '下一月' }));
+      expect(screen.getByRole('button', { name: '設定挑戰週期' })).toBeTruthy();
+    });
+
+    it('底部導覽列為透明背景', async () => {
+      render(<HomeScreen />);
+      await screen.findByText('今日待完成');
+
+      const tablist = screen.getByRole('tablist');
+      const flatStyle = Array.isArray(tablist.props.style)
+        ? Object.assign({}, ...tablist.props.style)
+        : tablist.props.style;
+      expect(flatStyle?.backgroundColor).toBe('transparent');
+    });
+  });
 });

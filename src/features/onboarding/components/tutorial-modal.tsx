@@ -114,5 +114,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    alignItems: 'center',
   },
 });

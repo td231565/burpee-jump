@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Pause, Play, Square } from 'lucide-react-native';
 import { AppText } from '../components/ui/app-text';
 import { Button } from '../components/ui/button';
 import { IconButton } from '../components/ui/icon-button';
@@ -13,6 +13,9 @@ import { getAudioPreferences, type AudioPreferences } from '../data/audio-prefer
 import { insertCompletion } from '../data/completions';
 import { useTabataTimer } from '../features/workout/use-tabata-timer';
 import { TimerDisplay } from '../features/workout/components/timer-display';
+import { WorkoutCompanion } from '../features/workout/components/workout-companion';
+import { CelebrationDisplay } from '../features/workout/components/celebration-display';
+import { triggerCompletionVibration } from '../features/workout/vibration';
 import { colors, radius, spacing } from '../theme/tokens';
 
 export default function WorkoutScreen() {
@@ -29,6 +32,30 @@ export default function WorkoutScreen() {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (isMounted) {
+          setReduceMotion(enabled);
+        }
+      })
+      .catch(() => {});
+
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      (enabled) => {
+        setReduceMotion(enabled);
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      sub?.remove?.();
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,6 +100,15 @@ export default function WorkoutScreen() {
         });
     }
   }, [status, saveRecord, db, markSaveSuccess, markSaveError]);
+
+  // 完成回饋一次性震動
+  const hasVibratedRef = useRef(false);
+  useEffect(() => {
+    if (status === 'completed' && !hasVibratedRef.current) {
+      hasVibratedRef.current = true;
+      triggerCompletionVibration();
+    }
+  }, [status]);
 
   const handleBackPress = () => {
     if (timer.status === 'ready' || timer.status === 'preparing') {
@@ -127,68 +163,93 @@ export default function WorkoutScreen() {
         {/* 核心內容區 */}
         <View style={styles.content}>
           {timer.status === 'ready' && (
-            <View style={styles.readyCard}>
-              <AppText variant="headline" style={styles.readyTitle}>
-                固定流程
-              </AppText>
-              <View style={styles.ruleList}>
-                <View style={styles.ruleItem}>
-                  <View style={[styles.dot, { backgroundColor: colors.work }]} />
-                  <AppText variant="body" style={styles.ruleText}>
-                    運動 20 秒
-                  </AppText>
-                </View>
-                <View style={styles.ruleItem}>
-                  <View style={[styles.dot, { backgroundColor: colors.rest }]} />
-                  <AppText variant="body" style={styles.ruleText}>
-                    休息 10 秒
-                  </AppText>
-                </View>
-                <View style={styles.ruleItem}>
-                  <View style={[styles.dot, { backgroundColor: colors.today }]} />
-                  <AppText variant="body" style={styles.ruleText}>
-                    4 組，最後一組後不休息
-                  </AppText>
-                </View>
+            <View style={styles.stateWrapper}>
+              <View style={styles.companionSlot}>
+                <WorkoutCompanion status="ready" reduceMotion={reduceMotion} />
               </View>
-
-              {timer.isAudioDegraded && (
-                <View style={styles.degradedBanner}>
-                  <AppText variant="caption" style={styles.degradedText}>
-                    音訊無法播放，本次將以靜音模式進行
-                  </AppText>
+              <View style={styles.readyCard}>
+                <AppText variant="headline" style={styles.readyTitle}>
+                  固定流程
+                </AppText>
+                <View style={styles.ruleList}>
+                  <View style={styles.ruleItem}>
+                    <View style={[styles.dot, { backgroundColor: colors.work }]} />
+                    <AppText variant="body" style={styles.ruleText}>
+                      運動 20 秒
+                    </AppText>
+                  </View>
+                  <View style={styles.ruleItem}>
+                    <View style={[styles.dot, { backgroundColor: colors.rest }]} />
+                    <AppText variant="body" style={styles.ruleText}>
+                      休息 10 秒
+                    </AppText>
+                  </View>
+                  <View style={styles.ruleItem}>
+                    <View style={[styles.dot, { backgroundColor: colors.today }]} />
+                    <AppText variant="body" style={styles.ruleText}>
+                      4 組，最後一組後不休息
+                    </AppText>
+                  </View>
                 </View>
-              )}
+
+                {timer.isAudioDegraded && (
+                  <View style={styles.degradedBanner}>
+                    <AppText variant="caption" style={styles.degradedText}>
+                      音訊無法播放，本次將以靜音模式進行
+                    </AppText>
+                  </View>
+                )}
+              </View>
             </View>
           )}
 
           {(timer.status === 'preparing' ||
             timer.status === 'running' ||
             timer.status === 'paused') && (
-            <TimerDisplay status={timer.status} snapshot={timer.snapshot} />
+            <View style={styles.stateWrapper}>
+              <View style={styles.companionSlot}>
+                <WorkoutCompanion
+                  status={timer.status}
+                  stageType={timer.snapshot.stageType}
+                  reduceMotion={reduceMotion}
+                />
+              </View>
+              <TimerDisplay status={timer.status} snapshot={timer.snapshot} />
+            </View>
           )}
 
           {timer.status === 'saving' && (
-            <View style={styles.savingCard}>
-              <AppText variant="headline" style={styles.savingTitle}>
-                正在保存紀錄...
-              </AppText>
+            <View style={styles.stateWrapper}>
+              <View style={styles.companionSlot}>
+                <WorkoutCompanion status="saving" reduceMotion={reduceMotion} />
+              </View>
+              <View style={styles.savingCard}>
+                <AppText variant="headline" style={styles.savingTitle}>
+                  正在保存紀錄...
+                </AppText>
+              </View>
             </View>
           )}
 
           {timer.status === 'saveError' && (
-            <View style={styles.errorCard}>
-              <AppText variant="headline" style={styles.errorTitle}>
-                儲存失敗
-              </AppText>
-              <AppText variant="body" style={styles.errorMessage}>
-                無法寫入訓練紀錄，請重新儲存或放棄本次紀錄
-              </AppText>
+            <View style={styles.stateWrapper}>
+              <View style={styles.companionSlot}>
+                <WorkoutCompanion status="saveError" reduceMotion={reduceMotion} />
+              </View>
+              <View style={styles.errorCard}>
+                <AppText variant="headline" style={styles.errorTitle}>
+                  儲存失敗
+                </AppText>
+                <AppText variant="body" style={styles.errorMessage}>
+                  無法寫入訓練紀錄，請重新儲存或放棄本次紀錄
+                </AppText>
+              </View>
             </View>
           )}
 
           {timer.status === 'completed' && (
             <View style={styles.completedCard}>
+              <CelebrationDisplay reduceMotion={reduceMotion} />
               <AppText variant="hero" style={styles.completedTitle}>
                 訓練完成！
               </AppText>
@@ -213,55 +274,77 @@ export default function WorkoutScreen() {
           )}
 
           {timer.status === 'preparing' && (
-            <Button
-              variant="secondary"
-              onPress={handleBackPress}
-              accessibilityLabel="取消訓練"
-              style={styles.actionButton}
-            >
-              取消訓練
-            </Button>
+            <View style={styles.iconButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="取消訓練"
+                onPress={handleBackPress}
+                style={({ pressed }) => [
+                  styles.iconActionButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+                hitSlop={12}
+              >
+                <Square size={32} color={colors.error} fill={colors.error} />
+              </Pressable>
+            </View>
           )}
 
           {timer.status === 'running' && (
-            <View style={styles.buttonRow}>
-              <Button
-                variant="secondary"
-                onPress={timer.pause}
+            <View style={styles.iconButtonRow}>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="暫停"
-                style={styles.halfButton}
+                onPress={timer.pause}
+                style={({ pressed }) => [
+                  styles.iconActionButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+                hitSlop={12}
               >
-                暫停
-              </Button>
-              <Button
-                variant="secondary"
-                onPress={handleBackPress}
+                <Pause size={32} color={colors.success} fill={colors.success} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="取消訓練"
-                style={styles.halfButton}
+                onPress={handleBackPress}
+                style={({ pressed }) => [
+                  styles.iconActionButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+                hitSlop={12}
               >
-                取消訓練
-              </Button>
+                <Square size={32} color={colors.error} fill={colors.error} />
+              </Pressable>
             </View>
           )}
 
           {timer.status === 'paused' && (
-            <View style={styles.buttonRow}>
-              <Button
-                variant="primary"
-                onPress={timer.resume}
+            <View style={styles.iconButtonRow}>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="繼續"
-                style={styles.halfButton}
+                onPress={timer.resume}
+                style={({ pressed }) => [
+                  styles.iconActionButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+                hitSlop={12}
               >
-                繼續
-              </Button>
-              <Button
-                variant="secondary"
-                onPress={handleBackPress}
+                <Play size={32} color={colors.success} fill={colors.success} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="取消訓練"
-                style={styles.halfButton}
+                onPress={handleBackPress}
+                style={({ pressed }) => [
+                  styles.iconActionButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+                hitSlop={12}
               >
-                取消訓練
-              </Button>
+                <Square size={32} color={colors.error} fill={colors.error} />
+              </Pressable>
             </View>
           )}
 
@@ -354,6 +437,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing.lg,
   },
+  stateWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  companionSlot: {
+    marginBottom: spacing.base,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   readyCard: {
     width: '100%',
     maxWidth: 320,
@@ -431,18 +524,37 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: spacing.base,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
   actionButton: {
-    width: '100%',
     minHeight: 48,
   },
   buttonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    justifyContent: 'center',
     width: '100%',
   },
   halfButton: {
-    flex: 1,
     minHeight: 48,
+  },
+  iconButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  iconActionButton: {
+    minWidth: 48,
+    minHeight: 48,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconButtonPressed: {
+    opacity: 0.6,
+    transform: [{ scale: 0.92 }],
   },
 });

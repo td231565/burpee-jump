@@ -269,7 +269,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   homeButton: {
-    width: '100%',
     minHeight: 48,
   },
   skipButton: {

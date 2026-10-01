@@ -12,9 +12,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 import { AppText } from '../../../components/ui/app-text';
-import { Button } from '../../../components/ui/button';
 import { IconButton } from '../../../components/ui/icon-button';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import type { AudioPreferences } from '../../../data/audio-preferences';
@@ -152,12 +151,13 @@ export function SettingsModal({
     }
   };
 
-  const handleToggleVoice = (value: boolean) => {
-    onUpdatePreferences({ ...preferences, voice_enabled: value });
-  };
-
-  const handleToggleCues = (value: boolean) => {
-    onUpdatePreferences({ ...preferences, cues_enabled: value });
+  // Phase 3: 「提示語音」Switch，一次切換同步保存 voice_enabled、cues_enabled 為相同值
+  const handleTogglePrompts = (value: boolean) => {
+    onUpdatePreferences({
+      ...preferences,
+      voice_enabled: value,
+      cues_enabled: value,
+    });
   };
 
   const handleToggleMusic = (value: boolean) => {
@@ -221,17 +221,30 @@ export function SettingsModal({
                       <AppText variant="caption" style={styles.label}>
                         暱稱（選填）
                       </AppText>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder="輸入暱稱"
-                        placeholderTextColor={colors.muted}
-                        value={nicknameDraft}
-                        onChangeText={handleDraftChange}
-                        maxLength={20}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        accessibilityLabel="暱稱（選填）"
-                      />
+                      <View style={styles.inputRow}>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="輸入暱稱"
+                          placeholderTextColor={colors.muted}
+                          value={nicknameDraft}
+                          onChangeText={handleDraftChange}
+                          maxLength={20}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          accessibilityLabel="暱稱（選填）"
+                        />
+                        <IconButton
+                          onPress={handleSaveNickname}
+                          disabled={!isModified || isSavingNickname}
+                          accessibilityLabel="更新暱稱"
+                        >
+                          <Check
+                            size={20}
+                            color={!isModified || isSavingNickname ? colors.muted : colors.primary}
+                            strokeWidth={2.5}
+                          />
+                        </IconButton>
+                      </View>
                       <AppText variant="caption" style={styles.helperText}>
                         最多 20 個字元
                       </AppText>
@@ -245,18 +258,6 @@ export function SettingsModal({
                           {saveError}
                         </AppText>
                       )}
-
-                      <View style={styles.updateButtonContainer}>
-                        <Button
-                          variant="secondary"
-                          onPress={handleSaveNickname}
-                          disabled={!isModified || isSavingNickname}
-                          accessibilityLabel="更新暱稱"
-                          style={styles.updateButton}
-                        >
-                          更新暱稱
-                        </Button>
-                      </View>
 
                       {saveSuccess && (
                         <AppText
@@ -278,24 +279,12 @@ export function SettingsModal({
 
                     <View style={styles.row}>
                       <AppText variant="body" style={styles.rowLabel}>
-                        導引語音
+                        提示語音
                       </AppText>
                       <Switch
                         value={preferences.voice_enabled}
-                        onValueChange={handleToggleVoice}
-                        accessibilityLabel="導引語音"
-                        trackColor={{ false: colors.border, true: colors.primary }}
-                      />
-                    </View>
-
-                    <View style={styles.row}>
-                      <AppText variant="body" style={styles.rowLabel}>
-                        提示音效
-                      </AppText>
-                      <Switch
-                        value={preferences.cues_enabled}
-                        onValueChange={handleToggleCues}
-                        accessibilityLabel="提示音效"
+                        onValueChange={handleTogglePrompts}
+                        accessibilityLabel="提示語音"
                         trackColor={{ false: colors.border, true: colors.primary }}
                       />
                     </View>
@@ -404,7 +393,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.ink,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md, // Phase 3: 增加 spacing.xs (8 + 4 = 12)
   },
   inputGroup: {
     marginBottom: spacing.xs,
@@ -412,9 +401,15 @@ const styles = StyleSheet.create({
   label: {
     color: colors.ink,
     fontWeight: typography.fontWeight.semibold,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm, // Phase 3: 增加 spacing.xs (4 + 4 = 8)
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   textInput: {
+    flex: 1,
     backgroundColor: colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: colors.border,
@@ -436,12 +431,6 @@ const styles = StyleSheet.create({
   successText: {
     color: colors.success,
     marginTop: spacing.xs,
-  },
-  updateButtonContainer: {
-    marginTop: spacing.sm,
-  },
-  updateButton: {
-    minHeight: 44,
   },
   row: {
     flexDirection: 'row',

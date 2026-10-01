@@ -69,22 +69,28 @@ components:
     textColor: "{colors.solid-surface}"
     typography: "{typography.headline}"
     rounded: "{rounded.md}"
-    padding: "12px 24px"
+    padding: "12px 24px (大字級優先縮減水平留白)"
+    width: "依內容決定寬度 (maxWidth: 100%)"
     height: "52px"
   button-secondary:
     backgroundColor: "{colors.solid-surface}"
     textColor: "{colors.deep-slate-ink}"
     typography: "{typography.headline}"
     rounded: "{rounded.md}"
-    padding: "12px 24px"
+    padding: "12px 24px (大字級優先縮減水平留白)"
+    width: "依內容決定寬度 (maxWidth: 100%)"
     height: "52px"
   button-disabled:
     backgroundColor: "{colors.subtle-surface}"
     textColor: "{colors.muted-slate}"
     typography: "{typography.headline}"
     rounded: "{rounded.md}"
-    padding: "12px 24px"
+    padding: "12px 24px (大字級優先縮減水平留白)"
+    width: "依內容決定寬度 (maxWidth: 100%)"
     height: "52px"
+  bottom-nav:
+    backgroundColor: "transparent"
+    minHeight: "52px"
   icon-button:
     backgroundColor: "{colors.subtle-surface}"
     textColor: "{colors.deep-slate-ink}"
@@ -257,13 +263,13 @@ components:
 
 ### Optional Human Character
 
-- **Optionality:** Pre-Phase 3 的訓練與完成角色為必要交付；其他畫面的角色仍可選。
-- **Form:** 可以使用原創人形角色；採簡化 2D 輪廓、清楚動作與 3 至 5 個主要顏色，不要求寫實比例、細緻五官、複雜服裝或材質。Pre-Phase 3 使用少量幀格的像素風簡化波比跳循環。
-- **Role:** 一般情況只作為首次引導、完成時刻或商店宣傳圖中的陪伴與動作提示。Pre-Phase 3 計時畫面的小人只作陪伴，不是動作教學；月曆操作、狀態判斷與正式倒數不得依賴角色。
-- **Placement:** Pre-Phase 3 的正式計時畫面須顯示小人，但只能出現在倒數卡外的留白處，尺寸與對比低於倒數，不與數字爭奪注意力。
+- **Optionality:** Pre-Phase 3 的訓練與完成角色、Phase 3 首頁完成狀態靜態肌肉小人為必要交付；其他畫面的角色仍可選。
+- **Form:** 可以使用原創人形角色；採簡化 2D 輪廓、清楚動作與 3 至 5 個主要顏色，不要求寫實比例、細緻五官、複雜服裝或材質。訓練中使用少量幀格的像素風簡化波比跳循環（運動每姿勢 500ms、休息每姿勢 800ms，為 Reduce Motion 之例外仍播放動畫）。
+- **Role:** 一般情況只作為首次引導、完成時刻或商店宣傳圖中的陪伴與動作提示。計時畫面的小人只作陪伴，不是動作教學；月曆操作、狀態判斷與正式倒數不得依賴角色。
+- **Placement:** 正式計時畫面須顯示小人，但只能出現在倒數卡外的留白處，尺寸與對比低於倒數，不與數字爭奪注意力。首頁「今日已完成」文字下方放置靜態肌肉小人作為純裝飾（從螢幕閱讀器隱藏），小螢幕或大字級優先縮小或隱藏，確保操作區免捲動可見。
 - **Originality:** 皮克敏與寶可夢只作為「戶外探索、自然親近、輕冒險」的氣氛參考，不得借用可辨識的角色輪廓、頭頂莖葉生物、紅白球、捕捉語彙、屬性徽章、戰鬥介面、招牌字體或配色組合。
 
-**The Optional Character Rule.** 除 Pre-Phase 3 必要交付的訓練與完成角色外，其他畫面的角色可省略。Pre-Phase 3 角色若影響流程、倒數或效能，須修正並重驗，不以移除角色作為完成方案。
+**The Optional Character Rule.** 除 Pre-Phase 3 必要交付的訓練與完成角色及 Phase 3 首頁完成裝飾角色外，其他畫面的角色可省略。陪伴角色若影響流程、倒數或效能，須修正並重驗，不以移除角色作為完成方案。
 
 ### Asset Sources and Licensing
 

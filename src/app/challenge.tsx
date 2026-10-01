@@ -214,9 +214,9 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: spacing.base,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
   actionButton: {
-    width: '100%',
     minHeight: 48,
   },
 });

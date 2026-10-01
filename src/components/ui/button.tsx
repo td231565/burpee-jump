@@ -2,6 +2,8 @@ import React from 'react';
 import {
   Pressable,
   StyleSheet,
+  useWindowDimensions,
+  View,
   type GestureResponderEvent,
   type StyleProp,
   type ViewStyle,
@@ -11,7 +13,8 @@ import { AppText } from './app-text';
 
 export interface ButtonProps {
   onPress?: (event: GestureResponderEvent) => void;
-  children: string;
+  children: React.ReactNode;
+  iconRight?: React.ReactNode;
   disabled?: boolean;
   accessibilityLabel?: string;
   variant?: 'primary' | 'secondary' | 'disabled';
@@ -21,22 +24,31 @@ export interface ButtonProps {
 export function Button({
   onPress,
   children,
+  iconRight,
   disabled = false,
   accessibilityLabel,
   variant = 'primary',
   style,
 }: ButtonProps) {
   const isActionDisabled = disabled || variant === 'disabled';
+  const { fontScale } = useWindowDimensions();
+
+  // Phase 3: 每側留白最多 24dp (spacing.lg)，大字級時優先縮減左右留白以保留單行文字
+  const horizontalPadding =
+    fontScale > 1.5 ? spacing.sm : fontScale > 1.2 ? spacing.md : spacing.lg;
+
+  const defaultLabel = typeof children === 'string' ? children : undefined;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? children}
+      accessibilityLabel={accessibilityLabel ?? defaultLabel}
       accessibilityState={{ disabled: isActionDisabled }}
       disabled={isActionDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        { paddingHorizontal: horizontalPadding },
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         isActionDisabled && styles.disabled,
@@ -44,26 +56,41 @@ export function Button({
         style,
       ]}
     >
-      <AppText
-        variant="headline"
-        style={[
-          styles.text,
-          variant === 'primary' && styles.primaryText,
-          variant === 'secondary' && styles.secondaryText,
-          isActionDisabled && styles.disabledText,
-        ]}
-      >
-        {children}
-      </AppText>
+      <View style={styles.contentRow}>
+        {typeof children === 'string' ? (
+          <AppText
+            variant="headline"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+            style={[
+              styles.text,
+              variant === 'primary' && styles.primaryText,
+              variant === 'secondary' && styles.secondaryText,
+              isActionDisabled && styles.disabledText,
+            ]}
+          >
+            {children}
+          </AppText>
+        ) : (
+          children
+        )}
+        {iconRight}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
   base: {
     minHeight: 52,
     minWidth: 44,
-    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderCurve: 'continuous',
@@ -71,6 +98,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
   text: {
     textAlign: 'center',

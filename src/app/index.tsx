@@ -34,6 +34,7 @@ import {
   getYesterday,
 } from '../features/calendar/date-utils';
 import { MonthCalendar } from '../features/calendar/components/month-calendar';
+import { PixelCharacter } from '../features/workout/components/pixel-character';
 import { SettingsModal } from '../features/settings/components/settings-modal';
 import { TutorialModal } from '../features/onboarding/components/tutorial-modal';
 import { OnboardingScreen } from '../features/onboarding/components/onboarding-screen';
@@ -80,7 +81,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
   const params = useLocalSearchParams<{ completedLocalDate?: string }>();
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight, fontScale } = useWindowDimensions();
+
+  // Phase 3: 今日已完成裝飾肌肉小人尺寸（一般 88×98、小螢幕／大字級縮小至 64×72、特小螢幕／極大字級隱藏以確保操作區不捲動）
+  const showCelebrateCharacter = !(windowHeight < 560 || fontScale >= 1.8);
+  const celebrateDimensions =
+    windowHeight < 680 || fontScale > 1.3
+      ? { width: 64, height: 72 }
+      : { width: 88, height: 98 };
 
   const [appState, setAppState] = useState<'loading' | 'onboarding' | 'home'>('loading');
   const [nickname, setNickname] = useState<string | null>(null);
@@ -801,7 +809,7 @@ export default function HomeScreen() {
             {nickname && nickname.trim().length > 0 ? (
               <View style={styles.greetingContainer}>
                 <AppText variant="title" style={styles.greetingText}>
-                  {`Hi，${nickname.trim()}`}
+                  {`Hi ${nickname.trim()}`}
                 </AppText>
               </View>
             ) : null}
@@ -840,10 +848,23 @@ export default function HomeScreen() {
                 )}
 
                 {todayStatus === 'completed' && (
-                  <View style={styles.statusRow}>
-                    <AppText variant="title" style={styles.completedStatusText}>
+                  <View style={styles.completedStatusContainer}>
+                    <AppText variant="hero" style={styles.completedStatusText}>
                       今日已完成
                     </AppText>
+                    {showCelebrateCharacter && (
+                      <View
+                        style={styles.celebrateWrapper}
+                        accessible={false}
+                        importantForAccessibility="no-hide-descendants"
+                      >
+                        <PixelCharacter
+                          frame="celebrate"
+                          width={celebrateDimensions.width}
+                          height={celebrateDimensions.height}
+                        />
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -941,6 +962,7 @@ export default function HomeScreen() {
                     }
                     accessibilityLabel="再做一次"
                     style={styles.actionButton}
+                    iconRight={<RotateCw size={18} color={colors.ink} strokeWidth={2.2} />}
                   >
                     再做一次
                   </Button>
@@ -1136,21 +1158,21 @@ export default function HomeScreen() {
                   </View>
                 </View>
             </View>
-
-            {/* 無進行中挑戰時，日曆 ScrollView 中緊接網格後顯示設定挑戰週期按鈕 */}
-            {challengeStatus === 'none' && (
-              <View style={styles.setupChallengeContainer}>
-                <Button
-                  variant="secondary"
-                  onPress={() => router.push('/challenge' as any)}
-                  accessibilityLabel="設定挑戰週期"
-                  style={styles.actionButton}
-                >
-                  設定挑戰週期
-                </Button>
-              </View>
-            )}
           </ScrollView>
+
+          {/* Phase 3: 無進行中挑戰時，日曆頁固定底部、共用 nav 上方顯示設定挑戰週期按鈕 */}
+          {challengeStatus === 'none' && (
+            <View style={styles.calendarFixedFooter}>
+              <Button
+                variant="secondary"
+                onPress={() => router.push('/challenge' as any)}
+                accessibilityLabel="設定挑戰週期"
+                style={styles.actionButton}
+              >
+                設定挑戰週期
+              </Button>
+            </View>
+          )}
         </View>
 
         {/* 固定底部導覽列 */}
@@ -1343,9 +1365,20 @@ const styles = StyleSheet.create({
     color: colors.rest,
     fontWeight: '600',
   },
+  completedStatusContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  celebrateWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
   completedStatusText: {
     color: colors.today,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   errorStatusText: {
     color: colors.rest,
@@ -1374,9 +1407,11 @@ const styles = StyleSheet.create({
   },
   homeFooter: {
     paddingVertical: spacing.base,
+    alignItems: 'center',
   },
   footerActionGroup: {
     gap: spacing.sm,
+    alignItems: 'center',
   },
   recoveryText: {
     color: colors.muted,
@@ -1389,11 +1424,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   actionButton: {
-    width: '100%',
     minHeight: 48,
   },
   unavailableBlock: {
     gap: spacing.sm,
+    alignItems: 'center',
   },
   retryButton: {
     marginBottom: spacing.xs,
@@ -1490,13 +1525,14 @@ const styles = StyleSheet.create({
     color: colors.rest,
     textAlign: 'center',
   },
-  setupChallengeContainer: {
-    marginTop: spacing.base,
-    width: '100%',
+  calendarFixedFooter: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    alignItems: 'center',
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     minHeight: 52,
     borderTopWidth: 0,
     alignItems: 'center',

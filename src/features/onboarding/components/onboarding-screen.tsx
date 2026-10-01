@@ -260,5 +260,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: spacing.base,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
 });

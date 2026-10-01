@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
+    justifyContent: 'center',
     width: '100%',
   },
   button: {
-    flex: 1,
     minHeight: 44,
   },
 });
