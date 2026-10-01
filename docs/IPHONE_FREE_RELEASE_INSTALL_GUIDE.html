@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#faf9f6">
+  <meta name="description" content="使用免費 Apple Account 與 Xcode，在自己的 iPhone 安裝 BurpeeJump 的 Release 建置。">
+  <title>在自己的 iPhone 免費安裝 BurpeeJump Release App</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: oklch(98.1% 0.006 88);
+      --surface: oklch(99.5% 0.004 88);
+      --soft: oklch(96% 0.013 215);
+      --ink: oklch(28% 0.025 245);
+      --muted: oklch(48% 0.018 245);
+      --line: oklch(89% 0.014 235);
+      --blue: oklch(54% 0.108 225);
+      --blue-dark: oklch(42% 0.095 225);
+      --green-soft: oklch(95% 0.028 145);
+      --amber-soft: oklch(96% 0.035 85);
+      --shadow: 0 18px 45px oklch(28% 0.025 245 / .06);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    a { color: var(--blue-dark); text-underline-offset: .18em; }
+    a:hover { color: var(--blue); }
+    a:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; border-radius: 3px; }
+    .skip { position: absolute; top: -60px; left: 16px; z-index: 10; padding: 8px 12px; background: var(--surface); }
+    .skip:focus { top: 12px; }
+    .topbar { border-bottom: 1px solid var(--line); background: var(--surface); }
+    .topbar-inner { max-width: 1200px; margin: auto; min-height: 62px; padding: 12px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .wordmark { font-size: 15px; font-weight: 780; letter-spacing: -.02em; color: var(--ink); text-decoration: none; }
+    .topbar span { color: var(--muted); font-size: 13px; }
+    .hero { max-width: 1200px; margin: auto; padding: 70px 26px 62px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: end; gap: 60px; }
+    .eyebrow { margin: 0 0 14px; color: var(--blue-dark); font-size: 13px; font-weight: 750; letter-spacing: .08em; }
+    h1 { max-width: 750px; margin: 0; font-size: clamp(38px, 4.7vw, 62px); line-height: 1.13; letter-spacing: -.055em; }
+    .hero-lede { max-width: 670px; margin: 22px 0 0; color: var(--muted); font-size: 19px; line-height: 1.7; }
+    .hero-note { border-top: 2px solid var(--blue); padding-top: 16px; color: var(--muted); font-size: 14px; }
+    .hero-note strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 15px; }
+    .content-wrap { border-top: 1px solid var(--line); background: var(--surface); }
+    .layout { max-width: 1200px; margin: auto; padding: 44px 26px 100px; display: grid; grid-template-columns: 230px minmax(0, 760px); gap: clamp(44px, 7vw, 108px); align-items: start; }
+    .toc { position: sticky; top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+    .toc-title { margin: 0 0 14px; color: var(--muted); font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+    .toc a { display: block; padding: 6px 0; color: var(--muted); font-size: 14px; text-decoration: none; }
+    .toc a:hover, .toc a:focus-visible { color: var(--blue-dark); }
+    main { min-width: 0; }
+    main > section { scroll-margin-top: 22px; margin-top: 60px; }
+    main > section:first-child { margin-top: 0; }
+    .section-kicker { margin: 0 0 7px; color: var(--blue-dark); font-size: 12px; font-weight: 750; letter-spacing: .09em; }
+    h2 { margin: 0 0 20px; font-size: 29px; line-height: 1.3; letter-spacing: -.035em; }
+    h3 { margin: 0 0 8px; font-size: 19px; line-height: 1.35; letter-spacing: -.02em; }
+    p { margin: 0 0 16px; max-width: 70ch; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.45em; }
+    li { margin: 8px 0; }
+    strong { font-weight: 720; }
+    code { padding: .12em .35em; border-radius: 5px; background: var(--soft); font: .88em/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+    pre { margin: 14px 0 20px; padding: 17px 20px; overflow-x: auto; border-radius: 13px; background: oklch(27% 0.026 242); color: oklch(96% 0.01 220); font: 14px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre code { padding: 0; background: none; color: inherit; font: inherit; overflow-wrap: normal; }
+    .intro { padding: 23px 27px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow); }
+    .intro p:last-child, .note p:last-child { margin-bottom: 0; }
+    .checklist { padding: 0; list-style: none; }
+    .checklist li { position: relative; padding-left: 30px; margin: 12px 0; }
+    .checklist li::before { content: ""; position: absolute; top: .55em; left: 0; width: 14px; height: 14px; border: 1.5px solid var(--blue); border-radius: 4px; }
+    .step { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 18px; padding: 24px 0 25px; border-top: 1px solid var(--line); }
+    .step:last-child { border-bottom: 1px solid var(--line); }
+    .step-num { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; background: var(--soft); color: var(--blue-dark); font-size: 15px; font-weight: 750; }
+    .step-body > :last-child { margin-bottom: 0; }
+    .note { margin: 22px 0; padding: 19px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); }
+    .note.success { background: var(--green-soft); }
+    .note.caution { background: var(--amber-soft); }
+    .note-title { margin: 0 0 5px; font-weight: 760; }
+    .measure-list { margin: 0; padding: 0; list-style: none; counter-reset: measure; }
+    .measure-list li { padding: 13px 0; border-bottom: 1px solid var(--line); }
+    details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+    summary { cursor: pointer; font-weight: 690; padding-right: 22px; }
+    summary:hover { color: var(--blue-dark); }
+    details p { margin: 12px 0 2px; color: var(--muted); }
+    .sources { font-size: 14px; color: var(--muted); }
+    .sources li { margin: 6px 0; }
+    footer { border-top: 1px solid var(--line); padding: 23px 26px 42px; color: var(--muted); font-size: 13px; }
+    footer div { max-width: 1200px; margin: auto; }
+    @media (max-width: 800px) {
+      .hero { grid-template-columns: 1fr; gap: 28px; padding-top: 48px; padding-bottom: 42px; }
+      .hero-note { max-width: 540px; }
+      .layout { grid-template-columns: 1fr; gap: 24px; padding-top: 26px; }
+      .toc { position: static; display: flex; flex-wrap: wrap; gap: 4px 16px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+      .toc-title { width: 100%; margin-bottom: 4px; }
+      .toc a { padding: 3px 0; }
+    }
+    @media (max-width: 520px) {
+      .topbar-inner, .hero, .layout { padding-left: 19px; padding-right: 19px; }
+      .topbar span { display: none; }
+      h1 { font-size: 37px; }
+      .hero-lede { font-size: 17px; }
+      h2 { font-size: 26px; }
+      .step { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+      .intro { padding: 18px; }
+      pre { margin-left: -4px; margin-right: -4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      body { background: white; }
+      .topbar, .toc { display: none; }
+      .hero, .layout { display: block; max-width: 100%; padding: 20px 0; }
+      .hero-note { margin-top: 20px; }
+      main > section { break-inside: avoid; }
+      a { color: inherit; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">跳至教學內容</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="wordmark" href="#top">BurpeeJump / 安裝指南</a>
+      <span>自己的 iPhone · 免費 Apple Account · Release 建置</span>
+    </div>
+  </header>
+
+  <div class="hero" id="top">
+    <div>
+      <p class="eyebrow">IOS 實機教學</p>
+      <h1>在自己的 iPhone<br>免費安裝 Release App</h1>
+      <p class="hero-lede">使用 Mac、Xcode 與免費 Apple Account，把 BurpeeJump 編譯成包含正式模式程式碼的 App，直接安裝到自己的手機。</p>
+    </div>
+    <div class="hero-note">
+      <strong>這份教學的終點</strong>
+      手機主畫面出現獨立的 BurpeeJump 圖示；拔掉連接線、關閉 Expo 開發伺服器後，App 仍能自行開啟。
+    </div>
+  </div>
+
+  <div class="content-wrap">
+    <div class="layout">
+      <nav class="toc" aria-label="本頁目錄">
+        <p class="toc-title">本頁目錄</p>
+        <a href="#overview">先看差別</a>
+        <a href="#prepare">準備事項</a>
+        <a href="#install">逐步安裝</a>
+        <a href="#verify">安裝後驗證</a>
+        <a href="#measure">測啟動時間</a>
+        <a href="#troubleshoot">常見問題</a>
+        <a href="#sources">官方來源</a>
+      </nav>
+
+      <main id="main">
+        <section id="overview" aria-labelledby="overview-title">
+          <p class="section-kicker">開始之前</p>
+          <h2 id="overview-title">先釐清「Release」與「免費簽署」</h2>
+          <div class="intro">
+            <p><strong>Release</strong> 指 App 以正式模式編譯，JavaScript 和資源包進安裝檔，不靠 Expo Go 或正在運作的 Metro 伺服器。<strong>免費 Personal Team</strong> 則是讓 Xcode 在你自己的 iPhone 上安裝這個建置的簽署方式。</p>
+            <p>這個 App 適合做實機功能與啟動效能測試；它不是可分享下載連結的 EAS Ad Hoc 建置，也不是可上傳 App Store 的發佈簽署檔。</p>
+          </div>
+          <div class="note caution">
+            <p class="note-title">免費帳號的有效期限</p>
+            <p>Apple 的免費 Personal Team 佈建描述檔 7 天後到期，之後須重新建置並安裝。免費帳號也有 App ID、裝置與已安裝 App 數量限制。這不影響本次短期實機測速。</p>
+          </div>
+        </section>
+
+        <section id="prepare" aria-labelledby="prepare-title">
+          <p class="section-kicker">01 / 準備</p>
+          <h2 id="prepare-title">開始前確認這些條件</h2>
+          <ul class="checklist">
+            <li>一台可執行目前 Xcode 的 Mac，並已安裝 Xcode 與 iOS 開發元件。</li>
+            <li>自己的 iPhone、可傳輸資料的連接線，以及可在 Xcode 登入的免費 Apple Account。</li>
+            <li>Mac 上已有 BurpeeJump 專案、Node.js 與 Bun；專案套件可正常安裝。</li>
+            <li>iPhone 已解鎖，能接受「信任這部電腦」與開發者模式提示。</li>
+          </ul>
+          <p>先在終端機確認 Xcode 命令列工具可用：</p>
+          <pre><code>xcodebuild -version
+xcode-select -p
+bun --version</code></pre>
+          <p>若 <code>xcode-select -p</code> 指向 Command Line Tools 而非 Xcode，先在 Xcode 的 <strong>Settings → Locations → Command Line Tools</strong> 選擇已安裝的 Xcode。還要對照 <a href="https://developer.apple.com/xcode/system-requirements/">Apple 的 Xcode 裝置支援表</a>，確認這版 Xcode 能支援 iPhone 的 iOS 版本；Xcode 太舊時，裝置可能一直顯示 Reconnecting。</p>
+        </section>
+
+        <section id="install" aria-labelledby="install-title">
+          <p class="section-kicker">02 / 操作步驟</p>
+          <h2 id="install-title">從原始碼到手機主畫面</h2>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">1</div>
+            <div class="step-body">
+              <h3>在 Xcode 登入免費 Apple Account</h3>
+              <p>開啟 Xcode，進入 <strong>Xcode → Settings → Apple Accounts</strong> 並登入。沒有付費會員資格時，Xcode 會顯示 <strong>Personal Team</strong>。後續簽署要選這個 Team。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">2</div>
+            <div class="step-body">
+              <h3>連接並配對自己的 iPhone</h3>
+              <p>用線連接 Mac，解鎖 iPhone，遇到「信任這部電腦」時選擇信任。Xcode 若要求配對或準備裝置，依畫面完成。第一次配對可能需要等候。</p>
+              <p><strong>確認方式：</strong>在 Xcode 的執行目的地選單打開「Manage Devices…」，或從 <strong>Xcode → Open Developer Tool → Device Hub</strong> 開啟裝置中心。iPhone 出現在側欄的 <strong>Available</strong> 下、畫面顯示「View Screen」，並且能在 Xcode 的執行目的地選單選到它，就代表配對完成。若仍顯示 Pair 或準備中，依畫面完成後再檢查。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">3</div>
+            <div class="step-body">
+              <h3>開啟 iPhone 的開發者模式</h3>
+              <p>在 iPhone 前往 <strong>設定 → 隱私權與安全性 → 開發者模式</strong>，開啟後依提示重新啟動並確認。若看不到該選項，先完成上一個步驟的 Xcode 配對，再回來查看。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">4</div>
+            <div class="step-body">
+              <h3>在 BurpeeJump 專案安裝依賴</h3>
+              <p>在終端機切換到自己的 BurpeeJump 專案資料夾。專案使用 Bun；若已存在可用的 <code>node_modules</code>，可略過安裝。</p>
+              <pre><code>cd /你的專案路徑/BurpeeJump
+bun install --frozen-lockfile</code></pre>
+              <p>路徑中的「你的專案路徑」是提示文字，請換成實際位置。也可在 Finder 把資料夾拖進終端機，取得正確路徑。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">5</div>
+            <div class="step-body">
+              <h3>設定專屬 Bundle Identifier</h3>
+              <p>編輯專案的 <code>app.json</code>，在 <code>expo.ios</code> 內加入 <code>bundleIdentifier</code>。名稱要由你自行選擇且足夠獨特；下面只是格式範例，<strong>不要直接照抄 example</strong>。</p>
+              <pre><code>"ios": {
+  "supportsTablet": false,
+  "bundleIdentifier": "com.你的識別名稱.burpeejump"
+}</code></pre>
+              <p>Bundle Identifier 決定手機如何辨識 App。若之後更換它，iPhone 會把新建置視為另一個 App，既有本機資料也不會自動搬過去。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">6</div>
+            <div class="step-body">
+              <h3>編譯 Release 並安裝到手機</h3>
+              <p>保持 iPhone 解鎖且連接，於 BurpeeJump 專案目錄執行：</p>
+              <pre><code>npx expo run:ios --configuration Release --device</code></pre>
+              <p>從清單選擇<strong>實體 iPhone</strong>。第一次執行時，Expo 會產生 iOS 原生專案、安裝必要的原生依賴，再交由 Xcode 編譯及安裝。Release 會把正式模式程式碼包進 App，無須另外啟動 <code>expo start</code>。</p>
+              <p>如果出現簽署錯誤，先照下一步在 Xcode 設定 Personal Team，然後重新執行本命令。</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num" aria-hidden="true">7</div>
+            <div class="step-body">
+              <h3>只在簽署失敗時，於 Xcode 補設定</h3>
+              <p>上述命令執行後會有 <code>ios</code> 原生目錄。在專案目錄直接開啟 <code>ios/BurpeeJump.xcodeproj</code>，不要選 BurpeeJump 資料夾本身。於 Xcode 左側選 BurpeeJump 專案及 App target，打開 <strong>Signing &amp; Capabilities</strong>，勾選 <strong>Automatically manage signing</strong>，將 <strong>Team</strong> 設為你的 Personal Team，並確認 Bundle Identifier 與 <code>app.json</code> 相同。</p>
+              <pre><code>xed ios/BurpeeJump.xcodeproj</code></pre>
+              <p>等 Xcode 完成簽署準備後，回到終端機再次執行第 6 步。若 Xcode 顯示某個 capability 不支援免費帳號，須處理該能力或改用付費會員；不要只反覆重跑命令。</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="verify" aria-labelledby="verify-title">
+          <p class="section-kicker">03 / 確認結果</p>
+          <h2 id="verify-title">如何知道裝的是獨立 Release App？</h2>
+          <ol>
+            <li>在 iPhone 主畫面找到 <strong>BurpeeJump</strong> 圖示，從圖示開啟；不經過 Expo Go 的專案清單。</li>
+            <li>在 Mac 關閉 Metro／Expo 開發伺服器，拔掉連接線，再從手機圖示重新開啟。</li>
+            <li>App 能進入 BurpeeJump 的首頁或首次引導頁，且不要求連接開發伺服器。</li>
+          </ol>
+          <div class="note success"><p class="note-title">成功標準</p><p>能獨立啟動並進入可操作畫面。請保留本次使用的 iPhone 型號、iOS 版本與原始碼版本，之後測效能才容易比較。</p></div>
+        </section>
+
+        <section id="measure" aria-labelledby="measure-title">
+          <p class="section-kicker">04 / 效能測試</p>
+          <h2 id="measure-title">接著測啟動時間</h2>
+          <p>安裝成功後，測速時從<strong>手機主畫面點 BurpeeJump 圖示</strong>開始計時，並區分「首次畫面出現」與「首頁可操作」。BurpeeJump 會初始化 SQLite 並載入引導狀態，畫面上出現載入指示器不代表首頁已可用。</p>
+          <ul class="measure-list">
+            <li><strong>冷啟動：</strong>完全結束 App 後重開；記錄多次測量結果。</li>
+            <li><strong>返回 App：</strong>切到其他 App，再返回 BurpeeJump；與冷啟動分開記錄。</li>
+            <li><strong>首次安裝：</strong>第一次資料庫初始化與首次引導另列，不與回訪首頁混合比較。</li>
+          </ul>
+          <p>手動錄影可做初步檢查；需要可比較的精確數值時，使用 Xcode／Instruments 的啟動效能工具，並記錄裝置與測試條件。</p>
+        </section>
+
+        <section id="troubleshoot" aria-labelledby="troubleshoot-title">
+          <p class="section-kicker">排查</p>
+          <h2 id="troubleshoot-title">卡住時先看這裡</h2>
+          <details><summary>命令找不到實體 iPhone</summary><p>確認手機已解鎖、線材可傳輸資料、已選擇信任 Mac，且 Xcode 已完成裝置配對。重新執行 <code>npx expo run:ios --configuration Release --device</code>，在清單選實體裝置。</p></details>
+          <details><summary>出現 Signing、Provisioning 或 Team 錯誤</summary><p>在 Xcode 登入 Apple Account，確認 App target 的 Automatically manage signing 已開啟、Team 為 Personal Team、Bundle Identifier 唯一。必要時按 Xcode 顯示的 Register 或 Set Up Signing。免費帳號不支援的 capability 會需要另外處理。</p></details>
+          <details><summary>iPhone 找不到「開發者模式」</summary><p>先連接 Mac 並透過 Xcode 啟動配對。Apple 說明開發者模式選項可能要在開始配對後才會出現；開啟時需重開機並再次確認。</p></details>
+          <details><summary>一直顯示 Reconnecting，並出現 developer disk image／0xe800010f</summary><p>先比對 iPhone 的 iOS 版本與 <code>xcodebuild -version</code>。這種錯誤可能表示目前 Xcode 缺少該裝置所需的開發映像。依 Apple 的 Xcode 裝置支援表，更新到支援該 iOS 的 Xcode；若新版 Xcode 要求更高版本 macOS，先更新 macOS。更新後重新開啟 Xcode、重接手機，再等待裝置完成準備。不要先刪除 DeveloperDiskImages 或反覆重建 BurpeeJump。</p></details>
+          <details><summary>App 一週後打不開</summary><p>免費 Personal Team 的安裝授權約 7 天到期。保持相同 Bundle Identifier，重新執行 Release 安裝流程即可。</p></details>
+          <details><summary>看到 Expo 開發選單或要求 Metro</summary><p>檢查是否誤裝 Debug／development build，或從 Expo Go 開啟專案。用 <code>--configuration Release</code> 重建，並從 BurpeeJump 的獨立圖示開啟。</p></details>
+        </section>
+
+        <section id="sources" aria-labelledby="sources-title">
+          <p class="section-kicker">參考文件</p>
+          <h2 id="sources-title">官方來源</h2>
+          <ul class="sources">
+            <li><a href="https://docs.expo.dev/more/expo-cli/">Expo CLI：Release 編譯、實體裝置與本機簽署</a></li>
+            <li><a href="https://developer.apple.com/help/account/basics/about-your-developer-account">Apple：免費 Personal Team 與 7 天限制</a></li>
+            <li><a href="https://developer.apple.com/documentation/xcode/building-and-running-an-app">Apple：在實體裝置執行及自動簽署</a></li>
+            <li><a href="https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device">Apple：開啟 iPhone 開發者模式</a></li>
+            <li><a href="https://docs.expo.dev/build/internal-distribution/">Expo：需付費會員的 Ad Hoc 內部分發</a></li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </div>
+  <footer><div>BurpeeJump · iPhone 免費 Release 實機安裝教學 · 2026-09-30</div></footer>
+</body>
+</html>
