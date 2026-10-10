@@ -3,6 +3,7 @@ export const colors = {
   canvas: '#FAF9F6', // 暖白，避免純白刺眼
   surface: '#FFFFFF', // 實心表面
   surfaceSubtle: '#F1F5F9', // 淺灰微表面
+  navigationSurface: '#FFF8E7', // 黃白底部導覽
 
   // 晨光自然小徑裝飾色：只作低對比背景，不承擔任何狀態語意
   natureSky: '#DCEAE6',
@@ -32,6 +33,7 @@ export const colors = {
 
   success: '#16A34A', // 完成狀態深綠
   successLight: '#DCFCE7', // 完成狀態淺綠
+  workoutPause: '#65A30D', // 訓練暫停操作的明亮草綠
 
   error: '#DC2626', // 錯誤狀態
   errorLight: '#FEE2E2',

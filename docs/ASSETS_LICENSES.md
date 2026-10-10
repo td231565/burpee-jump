@@ -37,3 +37,33 @@ Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
 * [x] 原生無縫循環（Seamless loop）支援確認
 * [ ] 實機音量 Ducking 驗收（待打包驗證）
 * [ ] 最終音檔格式、大小及安裝包增加量記錄（待打包驗證）
+
+---
+
+## 2. Phase 4 導引語音草稿（來源與授權待確認）
+
+以下為供 Phase 4 程式串接與本機檢視使用的衍生草稿。既有輸入音檔可追溯至 repository commit `a1a108c`；目前沒有足夠資料確認錄音者、取得來源或授權條款，也尚未由人實際聆聽確認文字與聽感。因此不得據此宣稱新錄音、TTS 原創、授權已清除或文案驗收通過；發布前須補齊來源／授權資訊並完成聆聽驗收。
+
+### `voice_work_first_start.wav`
+
+* **用途**：第一組運動開始提示，預期文案為「開始」，避免重複前面的「準備」；實機聽感待驗收。
+* **製作方式**：逐位元複製 commit `a1a108c` 的既有 `voice_work_1.wav`，未生成新語音內容。
+* **輸入與草稿 SHA-256**：`8dd3c846ddc2f73b591c0856498ee50303b473e508f6efa4a6be278a397a2ac6`
+* **格式與檢查值**：44.1 kHz、單聲道、16-bit PCM；0.572290 秒。
+
+### `voice_work_start.wav`
+
+* **用途**：Phase 4 第二組起共用運動開始提示的本機衍生草稿，預期文案為「準備，開始」；錄音實際文字及拼接聽感待聆聽確認。
+* **製作方式**：依序串接既有 `voice_prepare.wav`、120 ms 數位靜音及既有 `voice_work_1.wav`；未生成新語音內容。
+* **來源 SHA-256**：`voice_prepare.wav` `876e7f0cd0827974374396992e6e34ceb2ccb9a70c1d32ccb4983dc778bc09b7`；`voice_work_1.wav` `8dd3c846ddc2f73b591c0856498ee50303b473e508f6efa4a6be278a397a2ac6`
+* **草稿 SHA-256**：`f34d9736ba793be8d9d5a6a527aab2c9d536999e71571ddfea45438473da965a`
+* **格式與檢查值**：44.1 kHz、單聲道、16-bit PCM；1.248254 秒；絕對樣本峰值 25258 / 32768。
+
+### `voice_rest.wav`
+
+* **用途**：Phase 4 共用休息提示的本機衍生草稿，預期文案為「休息」；錄音實際文字待聆聽確認。
+* **製作方式**：逐位元複製既有 `voice_rest_1.wav`。既有 `voice_rest_1.wav`、`voice_rest_2.wav` 與 `voice_rest_3.wav` 的 SHA-256 相同。
+* **輸入與草稿 SHA-256**：`c93ee6039a8f9b1650e1422f16fdab15802fadded9fedb85b0f305d6a680ac5c`
+* **格式與檢查值**：44.1 kHz、單聲道、16-bit PCM；0.658050 秒；絕對樣本峰值 21757 / 32768。
+
+三份草稿長度均符合對應最短階段的提示間距檢查；此為靜態時長與 PCM 檢查，不代表語音可辨識度、素材權利或實機聽感已驗收。

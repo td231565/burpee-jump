@@ -4,7 +4,6 @@ export const DATABASE_NAME = 'burpeejump.db';
 
 export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(`
-    PRAGMA user_version = 3;
     CREATE TABLE IF NOT EXISTS daily_completions (
       local_date TEXT PRIMARY KEY NOT NULL,
       completed_at TEXT NOT NULL
@@ -41,6 +40,16 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
       challenge_id INTEGER NOT NULL REFERENCES challenges(id),
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS workout_preferences (
+      id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+      work_seconds INTEGER NOT NULL DEFAULT 20
+        CHECK (work_seconds BETWEEN 10 AND 60 AND work_seconds % 2 = 0),
+      rest_seconds INTEGER NOT NULL DEFAULT 10
+        CHECK (rest_seconds BETWEEN 6 AND 30 AND rest_seconds % 2 = 0),
+      rounds INTEGER NOT NULL DEFAULT 4 CHECK (rounds BETWEEN 1 AND 10)
+    );
+    INSERT OR IGNORE INTO workout_preferences (id, work_seconds, rest_seconds, rounds)
+    VALUES (1, 20, 10, 4);
+    PRAGMA user_version = 4;
   `);
 }
-

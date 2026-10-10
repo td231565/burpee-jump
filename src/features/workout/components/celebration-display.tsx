@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 import { CELEBRATE_PATHS } from '../pixel-character-data';
 
 export interface CelebrationDisplayProps {
@@ -62,13 +62,12 @@ export function CelebrationDisplay({ reduceMotion = false }: CelebrationDisplayP
             strokeLinecap="round"
           />
 
-          {/* 地平線草地 */}
-          <Line x1={-138} y1={0} x2={138} y2={0} stroke="#A8B99F" strokeWidth={3} strokeLinecap="round" />
-
           {/* 像素風展示肌肉完成小人 */}
-          {CELEBRATE_PATHS.map(({ color, d }, idx) => (
-            <Path key={`celebrate-${color}-${idx}`} fill={color} d={d} />
-          ))}
+          <G scale={1.8}>
+            {CELEBRATE_PATHS.map(({ color, d }, idx) => (
+              <Path key={`celebrate-${color}-${idx}`} fill={color} d={d} />
+            ))}
+          </G>
         </Svg>
       </Animated.View>
     </View>

@@ -1,4 +1,6 @@
 import {
+  createTabataPlan,
+  DEFAULT_WORKOUT_PARAMETERS,
   deriveTabataSnapshot,
   getTabataEvents,
   TABATA_STAGES,
@@ -8,6 +10,7 @@ import {
 
 describe('Tabata Timing Derivation (Seam 2)', () => {
   it('固定為 7 個正式階段，總時長 110 秒，最後一組後不休息', () => {
+    expect(DEFAULT_WORKOUT_PARAMETERS).toEqual({ workSeconds: 20, restSeconds: 10, rounds: 4 });
     expect(TABATA_STAGES).toHaveLength(7);
     expect(TOTAL_WORKOUT_DURATION_MS).toBe(110_000);
     expect(PREPARE_DURATION_MS).toBe(3_000);
@@ -26,6 +29,7 @@ describe('Tabata Timing Derivation (Seam 2)', () => {
     expect(snapshotAt0.phase).toBe('preparing');
     expect(snapshotAt0.remainingSeconds).toBe(3);
     expect(snapshotAt0.elapsedWorkoutMs).toBe(0);
+    expect(snapshotAt0.totalRounds).toBe(4);
 
     const snapshotAt1s = deriveTabataSnapshot(1000);
     expect(snapshotAt1s.phase).toBe('preparing');
@@ -103,21 +107,21 @@ describe('Tabata Timing Derivation (Seam 2)', () => {
   });
 
   it('音訊與語音事件：運動與休息邊界依序發出指定短句，不逐秒語音倒數', () => {
-    // 進入第一組運動 (3000ms): 發出「開始」語音
-    const eventsWork1 = getTabataEvents(2900, 3000);
-    expect(eventsWork1.voices).toContain('work_1');
+    // 語音提前播放，在第一組運動 3000ms 邊界結束。
+    const eventsWork1 = getTabataEvents(2400, 2500);
+    expect(eventsWork1.voices).toEqual(['work_first_start']);
 
     // 進入第一組休息 (23000ms): 發出「休息」語音
     const eventsRest1 = getTabataEvents(22900, 23000);
-    expect(eventsRest1.voices).toContain('rest_1');
+    expect(eventsRest1.voices).toEqual(['rest']);
 
-    // 進入第二組運動 (33000ms): 發出「第二組，開始」
-    const eventsWork2 = getTabataEvents(32900, 33000);
-    expect(eventsWork2.voices).toContain('work_2');
+    // 進入第二組運動 (33000ms): 同一段共用語音
+    const eventsWork2 = getTabataEvents(31700, 31800);
+    expect(eventsWork2.voices).toEqual(['work_start']);
 
-    // 進入第四組運動 (93000ms): 發出「最後一組」
-    const eventsWork4 = getTabataEvents(92900, 93000);
-    expect(eventsWork4.voices).toContain('work_4');
+    // 進入第四組運動 (93000ms): 同一段共用語音
+    const eventsWork4 = getTabataEvents(91700, 91800);
+    expect(eventsWork4.voices).toEqual(['work_start']);
 
     // 訓練完成 (113000ms): 發出「完成」語音與完成音效
     const eventsComplete = getTabataEvents(112900, 113000);
@@ -151,5 +155,52 @@ describe('Tabata Timing Derivation (Seam 2)', () => {
     const allEvents = getTabataEvents(0, 120000);
     expect((allEvents.cues as string[])).not.toContain('warning_5s');
     expect((allEvents.cues as string[])).not.toContain('countdown');
+  });
+
+  it('以非預設參數產生對應階段、總時長與邊界 snapshot', () => {
+    const plan = createTabataPlan({ workSeconds: 12, restSeconds: 8, rounds: 3 });
+
+    expect(plan.stages).toHaveLength(5);
+    expect(plan.totalWorkoutDurationMs).toBe(52_000);
+    expect(plan.totalFlowDurationMs).toBe(55_000);
+    expect(plan.stages.at(-1)).toEqual({ type: 'work', round: 3, durationSeconds: 12 });
+
+    const firstRest = deriveTabataSnapshot(15_000, plan);
+    expect(firstRest).toMatchObject({ phase: 'running', round: 1, totalRounds: 3, stageType: 'rest', remainingSeconds: 8 });
+
+    const secondWork = deriveTabataSnapshot(23_000, plan);
+    expect(secondWork).toMatchObject({ phase: 'running', round: 2, totalRounds: 3, stageType: 'work', remainingSeconds: 12 });
+
+    const completed = deriveTabataSnapshot(55_000, plan);
+    expect(completed).toMatchObject({ phase: 'completed', round: 3, totalRounds: 3, isFinished: true, elapsedWorkoutMs: 52_000 });
+  });
+
+  it('單組只建立運動階段，且完成時不安排組間休息', () => {
+    const plan = createTabataPlan({ workSeconds: 10, restSeconds: 6, rounds: 1 });
+
+    expect(plan.stages).toEqual([{ type: 'work', round: 1, durationSeconds: 10 }]);
+    expect(plan.totalWorkoutDurationMs).toBe(10_000);
+    expect(plan.totalFlowDurationMs).toBe(13_000);
+    expect(deriveTabataSnapshot(13_000, plan)).toMatchObject({
+      phase: 'completed', round: 1, totalRounds: 1, elapsedWorkoutMs: 10_000,
+    });
+    expect(getTabataEvents(12_900, 13_000, plan).voices).toEqual(['completed']);
+  });
+
+  it('十組計畫在每個階段邊界更新組數，並為每階段排入最後五秒節拍', () => {
+    const plan = createTabataPlan({ workSeconds: 10, restSeconds: 6, rounds: 10 });
+
+    expect(plan.stages).toHaveLength(19);
+    expect(plan.totalWorkoutDurationMs).toBe(154_000);
+    expect(plan.totalFlowDurationMs).toBe(157_000);
+    expect(deriveTabataSnapshot(19_000, plan)).toMatchObject({
+      phase: 'running', round: 2, totalRounds: 10, stageType: 'work', remainingSeconds: 10,
+    });
+
+    const events = getTabataEvents(0, plan.totalFlowDurationMs, plan);
+    expect(events.voices.filter((voice) => voice === 'work_first_start')).toHaveLength(1);
+    expect(events.voices.filter((voice) => voice === 'work_start')).toHaveLength(9);
+    expect(events.voices.filter((voice) => voice === 'rest')).toHaveLength(9);
+    expect(events.cues.filter((cue) => cue === 'stage_countdown')).toHaveLength(19 * 5);
   });
 });

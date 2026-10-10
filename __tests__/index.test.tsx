@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, BackHandler, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, BackHandler, View } from 'react-native';
 import HomeScreen from '../src/app/index';
 
 const mockPush = jest.fn();
@@ -187,7 +187,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       expect(screen.getByText('今日待完成')).toBeTruthy();
       expect(screen.getByText('準備開始今天的訓練了嗎')).toBeTruthy();
 
-      const goButton = screen.getByRole('button', { name: 'GO，開始今天的 2 分鐘' });
+      const goButton = screen.getByRole('button', { name: 'GO，開始今天的訓練' });
       expect(goButton).toBeTruthy();
 
       fireEvent.press(goButton);
@@ -211,7 +211,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       expect(await screen.findByText('今日為休息日')).toBeTruthy();
       expect(screen.getByText('準備開始今天的訓練了嗎')).toBeTruthy();
 
-      const goButton = screen.getByRole('button', { name: 'GO，開始今天的 2 分鐘' });
+      const goButton = screen.getByRole('button', { name: 'GO，開始今天的訓練' });
       expect(goButton).toBeTruthy();
       expect(screen.getByRole('button', { name: '取消休息' })).toBeTruthy();
 
@@ -228,7 +228,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       render(<HomeScreen />);
 
       expect(await screen.findByText('今日已完成')).toBeTruthy();
-      expect(screen.queryByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'GO，開始今天的訓練' })).toBeNull();
       expect(screen.queryByText('準備開始今天的訓練了嗎')).toBeNull();
 
       const repeatButton = screen.getByRole('button', { name: '再做一次' });
@@ -253,7 +253,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
 
       expect(screen.queryByText('今日待完成')).toBeNull();
       expect(screen.queryByText('今日已完成')).toBeNull();
-      expect(screen.queryByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'GO，開始今天的訓練' })).toBeNull();
       expect(screen.queryByText('準備開始今天的訓練了嗎')).toBeNull();
 
       await act(async () => {
@@ -261,7 +261,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       });
 
       expect(await screen.findByText('今日待完成')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'GO，開始今天的訓練' })).toBeTruthy();
     });
 
     it('今日狀態 unavailable 時：顯示錯誤說明、「重新載入」與「開始訓練」，不顯示 GO', async () => {
@@ -270,7 +270,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       render(<HomeScreen />);
 
       expect(await screen.findByText('暫時無法讀取今日紀錄')).toBeTruthy();
-      expect(screen.queryByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'GO，開始今天的訓練' })).toBeNull();
 
       expect(screen.getByRole('button', { name: '重新載入' })).toBeTruthy();
       const startUnrecordedBtn = screen.getByRole('button', { name: '開始訓練' });
@@ -290,7 +290,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
 
       render(<HomeScreen />);
 
-      expect(await screen.findByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeTruthy();
+      expect(await screen.findByRole('button', { name: 'GO，開始今天的訓練' })).toBeTruthy();
     });
   });
 
@@ -371,7 +371,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
 
       expect(await screen.findByText('2026 年 2 月 1 日')).toBeTruthy();
       expect(await screen.findByText('今日待完成')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'GO，開始今天的 2 分鐘' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'GO，開始今天的訓練' })).toBeTruthy();
 
       // 切換至日曆對齊 1 月
       fireEvent.press(screen.getByRole('tab', { name: '日曆' }));
@@ -404,6 +404,56 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       expect(await screen.findByText('設定')).toBeTruthy();
       expect(screen.getByText('個人資料')).toBeTruthy();
       expect(screen.getByText('音訊')).toBeTruthy();
+    });
+
+    it('設定讀取期間首頁重新 render，完成後 spinner 消失且不重複讀取', async () => {
+      const { rerender } = render(<HomeScreen />);
+      await screen.findByText('今日待完成');
+
+      let resolveProfile!: (profile: { nickname: string | null }) => void;
+      mockGetUserProfile.mockClear();
+      mockGetUserProfile.mockImplementation(() => new Promise(() => {}));
+      mockGetUserProfile.mockReturnValueOnce(new Promise((resolve) => {
+        resolveProfile = resolve;
+      }));
+
+      fireEvent.press(screen.getByRole('button', { name: '設定' }));
+      expect(screen.UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+
+      rerender(<HomeScreen />);
+      await act(async () => {
+        resolveProfile({ nickname: '小明' });
+      });
+
+      await waitFor(() => {
+        expect(screen.UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+        expect(screen.getByDisplayValue('小明')).toBeTruthy();
+      });
+      expect(mockGetUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    it('設定讀取失敗時 spinner 消失，重新開啟可再次讀取', async () => {
+      render(<HomeScreen />);
+      await screen.findByText('今日待完成');
+      mockGetUserProfile.mockClear();
+      mockGetUserProfile.mockRejectedValueOnce(new Error('讀取失敗'));
+
+      fireEvent.press(screen.getByRole('button', { name: '設定' }));
+      expect(await screen.findByText('個人資料讀取失敗')).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+      });
+
+      fireEvent.press(screen.getByRole('button', { name: '關閉設定' }));
+      mockGetUserProfile.mockResolvedValueOnce({ nickname: '小美' });
+      fireEvent.press(screen.getByRole('button', { name: '設定' }));
+
+      expect(await screen.findByDisplayValue('小美')).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+      });
+      expect(screen.queryByText('個人資料讀取失敗')).toBeNull();
+      expect(mockGetUserProfile).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -445,7 +495,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       expect(screen.getByRole('button', { name: '設定挑戰週期' })).toBeTruthy();
     });
 
-    it('底部導覽列為透明背景', async () => {
+    it('底部導覽列為米白背景', async () => {
       render(<HomeScreen />);
       await screen.findByText('今日待完成');
 
@@ -453,7 +503,7 @@ describe('HomeScreen Phase 2 Additional (底部導覽、GO 與狀態呈現)', ()
       const flatStyle = Array.isArray(tablist.props.style)
         ? Object.assign({}, ...tablist.props.style)
         : tablist.props.style;
-      expect(flatStyle?.backgroundColor).toBe('transparent');
+      expect(flatStyle?.backgroundColor).toBe('#FFF8E7');
     });
   });
 });

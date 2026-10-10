@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from '../../../components/ui/app-text';
-import { colors, radius, spacing } from '../../../theme/tokens';
+import { colors, spacing } from '../../../theme/tokens';
 import type { WorkoutStatus } from '../use-tabata-timer';
 import type { TabataSnapshot } from '../tabata';
 
@@ -12,7 +12,7 @@ export interface TimerDisplayProps {
 export function TimerDisplay({ status, snapshot }: TimerDisplayProps) {
   if (status === 'preparing') {
     return (
-      <View style={[styles.card, styles.preparingCard]}>
+      <View style={styles.container}>
         <AppText variant="title" style={styles.stageTitle}>
           準備
         </AppText>
@@ -24,19 +24,12 @@ export function TimerDisplay({ status, snapshot }: TimerDisplayProps) {
   }
 
   const isWork = snapshot.stageType === 'work';
-  const stageCardStyle = isWork ? styles.workCard : styles.restCard;
   const stageColor = isWork ? colors.work : colors.rest;
 
   return (
-    <View style={[styles.card, stageCardStyle]}>
-      {status === 'paused' && (
-        <View style={styles.pausedBadge}>
-          <AppText style={styles.pausedText}>已暫停</AppText>
-        </View>
-      )}
-
+    <View style={styles.container}>
       <AppText variant="headline" style={[styles.roundText, { color: stageColor }]}>
-        {`第 ${snapshot.round} / 4 組`}
+        {`第 ${snapshot.round} / ${snapshot.totalRounds} 組`}
       </AppText>
 
       <AppText variant="title" style={[styles.stageTitle, { color: stageColor }]}>
@@ -51,40 +44,13 @@ export function TimerDisplay({ status, snapshot }: TimerDisplayProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
+  container: {
     width: '100%',
-    aspectRatio: 1,
     maxWidth: 320,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-  },
-  preparingCard: {
-    backgroundColor: colors.todayLight,
-    borderColor: colors.todayBorder,
-  },
-  workCard: {
-    backgroundColor: colors.workLight,
-    borderColor: colors.work,
-  },
-  restCard: {
-    backgroundColor: colors.restLight,
-    borderColor: colors.rest,
-  },
-  pausedBadge: {
-    position: 'absolute',
-    top: spacing.base,
-    backgroundColor: colors.ink,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-  },
-  pausedText: {
-    color: colors.surface,
-    fontSize: 14,
-    fontWeight: '600',
   },
   roundText: {
     fontSize: 18,

@@ -5,10 +5,13 @@ import type { AudioPreferences } from '../../data/audio-preferences';
 import { formatLocalDateKey } from '../calendar/date-utils';
 import { TabataAudioService } from './audio-service';
 import {
+  createTabataPlan,
+  DEFAULT_WORKOUT_PARAMETERS,
   deriveTabataSnapshot,
   getTabataEvents,
-  TOTAL_FLOW_DURATION_MS,
   type TabataSnapshot,
+  type TabataPlan,
+  type WorkoutParameters,
 } from './tabata';
 
 export type WorkoutStatus =
@@ -29,6 +32,7 @@ export interface SaveRecord {
 interface WorkoutState {
   status: WorkoutStatus;
   lockedLocalDate: string | null;
+  plan: TabataPlan;
   snapshot: TabataSnapshot;
   isAudioDegraded: boolean;
   saveRecord: SaveRecord | null;
@@ -36,7 +40,7 @@ interface WorkoutState {
 }
 
 type WorkoutAction =
-  | { type: 'START'; localDate: string }
+  | { type: 'START'; localDate: string; plan: TabataPlan }
   | { type: 'TICK'; snapshot: TabataSnapshot; status?: WorkoutStatus }
   | { type: 'PAUSE' }
   | { type: 'RESUME' }
@@ -53,6 +57,7 @@ const initialSnapshot = deriveTabataSnapshot(0);
 const initialState: WorkoutState = {
   status: 'ready',
   lockedLocalDate: null,
+  plan: createTabataPlan(DEFAULT_WORKOUT_PARAMETERS),
   snapshot: initialSnapshot,
   isAudioDegraded: false,
   saveRecord: null,
@@ -66,8 +71,9 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         ...state,
         status: 'preparing',
         lockedLocalDate: action.localDate,
+        plan: action.plan,
         saveRecord: null,
-        snapshot: deriveTabataSnapshot(0),
+        snapshot: deriveTabataSnapshot(0, action.plan),
       };
     case 'TICK':
       return {
@@ -93,7 +99,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
           ...state,
           status: 'completed',
           saveRecord: null,
-          snapshot: deriveTabataSnapshot(TOTAL_FLOW_DURATION_MS),
+          snapshot: deriveTabataSnapshot(state.plan.totalFlowDurationMs, state.plan),
         };
       }
       return {
@@ -102,7 +108,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         saveRecord: state.lockedLocalDate
           ? { localDate: state.lockedLocalDate, completedAt: action.completedAt }
           : null,
-        snapshot: deriveTabataSnapshot(TOTAL_FLOW_DURATION_MS),
+        snapshot: deriveTabataSnapshot(state.plan.totalFlowDurationMs, state.plan),
       };
     case 'SAVE_SUCCESS':
       return {
@@ -138,7 +144,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
 }
 
 export interface UseTabataTimerProps {
-  preferences: AudioPreferences;
+  preferences: AudioPreferences | null;
   recordCompletion?: boolean;
 }
 
@@ -160,22 +166,30 @@ export function useTabataTimer({ preferences, recordCompletion = true }: UseTaba
 
   // Initialize audio service
   useEffect(() => {
+    if (!preferences || statusRef.current === 'cancelled') return;
+    let active = true;
     const audioService = new TabataAudioService();
     audioServiceRef.current = audioService;
 
     audioService.initialize(preferences).then((success) => {
+      if (!active || statusRef.current === 'cancelled') return;
       if (!success) {
         dispatch({ type: 'SET_AUDIO_DEGRADED', degraded: true });
+      } else if (statusRef.current === 'paused') {
+        audioService.pause();
       } else if (preferences.music_enabled) {
         audioService.playBgm();
       }
     });
 
     return () => {
+      active = false;
+      audioServiceRef.current = null;
       audioService.release();
-      deactivateKeepAwake();
     };
   }, [preferences]);
+
+  useEffect(() => () => { deactivateKeepAwake(); }, []);
 
   // KeepAwake sync
   useEffect(() => {
@@ -218,6 +232,16 @@ export function useTabataTimer({ preferences, recordCompletion = true }: UseTaba
       sessionStartTimeRef.current = Date.now();
     }
 
+    const elapsedAtResume = accumulatedElapsedRef.current + Date.now() - sessionStartTimeRef.current;
+    // Start prompts finish at the stage boundary, independently of the 100ms display tick.
+    const startVoiceTimeouts = state.plan.voiceSchedule
+      .filter(({ event, timeMs }) =>
+        (event === 'work_first_start' || event === 'work_start') && timeMs > elapsedAtResume
+      )
+      .map(({ event, timeMs }) => setTimeout(() => {
+        audioServiceRef.current?.playVoice(event);
+      }, Math.ceil(timeMs - elapsedAtResume)));
+
     const intervalId = setInterval(() => {
       if (sessionStartTimeRef.current === null) return;
 
@@ -226,20 +250,22 @@ export function useTabataTimer({ preferences, recordCompletion = true }: UseTaba
 
       // 音訊事件推導
       const fromMs = lastEvaluatedMsRef.current;
-      const toMs = Math.min(totalElapsedMs, TOTAL_FLOW_DURATION_MS);
+      const toMs = Math.min(totalElapsedMs, state.plan.totalFlowDurationMs);
       lastEvaluatedMsRef.current = toMs;
 
-      const { voices, cues } = getTabataEvents(fromMs, toMs);
+      const { voices, cues } = getTabataEvents(fromMs, toMs, state.plan);
       const audio = audioServiceRef.current;
       if (audio) {
-        for (const v of voices) audio.playVoice(v);
+        for (const v of voices) {
+          if (v !== 'work_first_start' && v !== 'work_start') audio.playVoice(v);
+        }
         for (const c of cues) audio.playCue(c);
       }
 
-      const snapshot = deriveTabataSnapshot(totalElapsedMs);
+      const snapshot = deriveTabataSnapshot(totalElapsedMs, state.plan);
 
       if (snapshot.isFinished) {
-        accumulatedElapsedRef.current = TOTAL_FLOW_DURATION_MS;
+        accumulatedElapsedRef.current = state.plan.totalFlowDurationMs;
         sessionStartTimeRef.current = null;
         const completedAt = new Date().toISOString();
         dispatch({ type: 'FINISH', completedAt });
@@ -253,19 +279,23 @@ export function useTabataTimer({ preferences, recordCompletion = true }: UseTaba
 
     return () => {
       clearInterval(intervalId);
+      startVoiceTimeouts.forEach(clearTimeout);
     };
-  }, [state.status]);
+  }, [state.status, state.plan]);
 
-  const start = useCallback(() => {
+  const start = useCallback((parameters: WorkoutParameters = DEFAULT_WORKOUT_PARAMETERS) => {
+    const plan = createTabataPlan(parameters);
     const today = new Date();
     const localDate = formatLocalDateKey(today);
     accumulatedElapsedRef.current = 0;
     sessionStartTimeRef.current = Date.now();
     lastEvaluatedMsRef.current = 0;
 
-    dispatch({ type: 'START', localDate });
+    dispatch({ type: 'START', localDate, plan });
     audioServiceRef.current?.playVoice('prepare');
     audioServiceRef.current?.playCue('prepare_countdown');
+    // The initial events were emitted directly above; subsequent event windows start after t=0.
+    lastEvaluatedMsRef.current = 1;
   }, []);
 
   const pause = useCallback(() => {

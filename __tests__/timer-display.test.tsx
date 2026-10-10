@@ -7,6 +7,7 @@ describe('TimerDisplay Component (Seam 4)', () => {
     const snapshot: TabataSnapshot = {
       phase: 'preparing',
       round: 1,
+      totalRounds: 4,
       stageIndex: 0,
       stageType: 'work',
       remainingSeconds: 3,
@@ -26,6 +27,7 @@ describe('TimerDisplay Component (Seam 4)', () => {
     const snapshot: TabataSnapshot = {
       phase: 'running',
       round: 2,
+      totalRounds: 7,
       stageIndex: 2,
       stageType: 'work',
       remainingSeconds: 15,
@@ -37,15 +39,16 @@ describe('TimerDisplay Component (Seam 4)', () => {
       <TimerDisplay status="running" snapshot={snapshot} />
     );
 
-    expect(getByText('第 2 / 4 組')).toBeTruthy();
+    expect(getByText('第 2 / 7 組')).toBeTruthy();
     expect(getByText('運動')).toBeTruthy();
     expect(getByText('15')).toBeTruthy();
   });
 
-  it('paused 狀態顯示「已暫停」與目前進度', () => {
+  it('paused 狀態保留目前進度，不顯示「已暫停」標籤', () => {
     const snapshot: TabataSnapshot = {
       phase: 'running',
       round: 1,
+      totalRounds: 1,
       stageIndex: 1,
       stageType: 'rest',
       remainingSeconds: 8,
@@ -53,12 +56,12 @@ describe('TimerDisplay Component (Seam 4)', () => {
       isFinished: false,
     };
 
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <TimerDisplay status="paused" snapshot={snapshot} />
     );
 
-    expect(getByText('已暫停')).toBeTruthy();
-    expect(getByText('第 1 / 4 組')).toBeTruthy();
+    expect(queryByText('已暫停')).toBeNull();
+    expect(getByText('第 1 / 1 組')).toBeTruthy();
     expect(getByText('休息')).toBeTruthy();
     expect(getByText('8')).toBeTruthy();
   });

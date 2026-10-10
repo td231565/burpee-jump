@@ -16,7 +16,7 @@ import {
 } from 'expo-audio';
 
 const loopAsset = require('../../assets/test-audio/test-loop.wav');
-const cueAsset = require('../../assets/test-audio/test-cue.wav');
+const cueAsset = require('../../assets/audio/voice_work_start.wav');
 
 export default function AudioTestScreen() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -222,9 +222,9 @@ export default function AudioTestScreen() {
         <Text style={styles.instruction}>
           測試步驟：{'\n'}
           1. 保持第三方音樂 (Spotify/Apple Music) 播放中{'\n'}
-          2. 點擊「播放短提示 (duckOthers)」{'\n'}
+          2. 點擊「播放「準備，開始」語音」{'\n'}
           3. 確認第三方音樂音量短暫變小（Duck）{'\n'}
-          4. 提示音播畢後確認第三方音樂音量立即恢復
+          4. 「準備，開始」播畢後確認第三方音樂音量立即恢復
         </Text>
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>狀態：</Text>
@@ -238,7 +238,7 @@ export default function AudioTestScreen() {
           onPress={handlePlayCueDuckOthers}
         >
           <Text style={styles.primaryButtonText}>
-            {isDuckRunning ? '播放與 Ducking 中...' : '播放短提示 (duckOthers)'}
+            {isDuckRunning ? '語音播放與 Ducking 中...' : '播放「準備，開始」語音'}
           </Text>
         </Pressable>
       </View>

@@ -651,6 +651,11 @@ export default function HomeScreen() {
     }
   };
 
+  const handleLoadProfile = useCallback(async () => {
+    if (!db) return { nickname: null };
+    return getUserProfile(db);
+  }, [db]);
+
   const handleUpdateNickname = async (newNickname: string | null) => {
     if (!db) return;
     await updateNickname(db, newNickname);
@@ -817,7 +822,10 @@ export default function HomeScreen() {
             {/* 首頁中間核心區：無白框卡片，直接位於 NatureBackdrop 上 */}
             <View style={styles.homeCenter}>
               <View style={styles.homeCoreContent}>
-                <AppText variant="headline" style={styles.todayDateText}>
+                <AppText
+                  variant="headline"
+                  style={[styles.todayDateText, todayStatus === 'completed' && styles.completedDateText]}
+                >
                   {formatDetailDate(formatLocalDateKey(todayDate))}
                 </AppText>
 
@@ -860,8 +868,8 @@ export default function HomeScreen() {
                       >
                         <PixelCharacter
                           frame="celebrate"
-                          width={celebrateDimensions.width}
-                          height={celebrateDimensions.height}
+                          width={celebrateDimensions.width * 1.6}
+                          height={celebrateDimensions.height * 1.6}
                         />
                       </View>
                     )}
@@ -885,7 +893,7 @@ export default function HomeScreen() {
 
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="GO，開始今天的 2 分鐘"
+                      accessibilityLabel="GO，開始今天的訓練"
                       onPress={() => router.push('/workout')}
                       style={[
                         styles.goPressable,
@@ -1186,7 +1194,12 @@ export default function HomeScreen() {
             accessibilityLabel="首頁"
             accessibilityState={{ selected: activeTab === 'home' }}
             onPress={() => handleTabChange('home')}
-            style={styles.tabButton}
+            style={({ pressed }) => [
+              styles.tabButton,
+              activeTab === 'home' && styles.selectedTabButton,
+              pressed && styles.tabButtonPressed,
+              pressed && activeTab === 'home' && styles.selectedTabButtonPressed,
+            ]}
           >
             <Home
               size={22}
@@ -1210,7 +1223,12 @@ export default function HomeScreen() {
             accessibilityLabel="日曆"
             accessibilityState={{ selected: activeTab === 'calendar' }}
             onPress={() => handleTabChange('calendar')}
-            style={styles.tabButton}
+            style={({ pressed }) => [
+              styles.tabButton,
+              activeTab === 'calendar' && styles.selectedTabButton,
+              pressed && styles.tabButtonPressed,
+              pressed && activeTab === 'calendar' && styles.selectedTabButtonPressed,
+            ]}
           >
             <Calendar
               size={22}
@@ -1264,10 +1282,7 @@ export default function HomeScreen() {
           visible={isSettingsOpen}
           preferences={audioPreferences}
           onUpdatePreferences={handleUpdatePreferences}
-          onLoadProfile={async () => {
-            if (!db) return { nickname: null };
-            return getUserProfile(db);
-          }}
+          onLoadProfile={handleLoadProfile}
           onUpdateNickname={handleUpdateNickname}
           onClose={() => setIsSettingsOpen(false)}
           initialNickname={nickname}
@@ -1351,6 +1366,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
+  completedDateText: {
+    marginBottom: spacing.sm,
+  },
   statusRow: {
     minHeight: 32,
     justifyContent: 'center',
@@ -1368,12 +1386,12 @@ const styles = StyleSheet.create({
   completedStatusContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   celebrateWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   completedStatusText: {
     color: colors.today,
@@ -1526,24 +1544,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calendarFixedFooter: {
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
     paddingHorizontal: spacing.base,
     alignItems: 'center',
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: 'transparent',
-    minHeight: 52,
-    borderTopWidth: 0,
+    backgroundColor: colors.navigationSurface,
+    minHeight: 48,
+    alignSelf: 'center',
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingVertical: spacing.xs,
+    justifyContent: 'center',
   },
   tabButton: {
-    flex: 1,
+    minWidth: 80,
+    paddingHorizontal: spacing.base,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+  },
+  selectedTabButton: {
+    backgroundColor: colors.primaryLight,
+    boxShadow: `inset 0 -3px 2px ${colors.primaryBorder}, inset 0 2px 2px ${colors.canvas}`,
+  },
+  tabButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.96 }],
+  },
+  selectedTabButtonPressed: {
+    opacity: 1,
+    transform: [{ translateY: 2 }, { scale: 0.96 }],
+    boxShadow: `0 1px 0 ${colors.primaryBorder}, inset 0 2px 3px rgba(42, 135, 173, 0.12)`,
   },
   tabText: {
     marginTop: 2,

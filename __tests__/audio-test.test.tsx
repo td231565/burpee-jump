@@ -27,6 +27,7 @@ describe('AudioTestScreen (Phase 1.5)', () => {
     expect(getByText('MVP 音訊技術驗證')).toBeTruthy();
     expect(getByText('契約 1 & 2：本機循環與 doNotMix')).toBeTruthy();
     expect(getByText('契約 3：短語音／提示 duckOthers 恢復')).toBeTruthy();
+    expect(getByText('播放「準備，開始」語音')).toBeTruthy();
     expect(getByText('契約 4 & 5：生命週期暫停與靜音模式')).toBeTruthy();
     expect(getByText('即時事件日誌')).toBeTruthy();
   });

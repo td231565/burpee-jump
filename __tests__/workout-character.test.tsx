@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act, screen } from '@testing-library/react-native';
 import { Vibration } from 'react-native';
 import { WorkoutCompanion } from '../src/features/workout/components/workout-companion';
 import { CelebrationDisplay } from '../src/features/workout/components/celebration-display';
@@ -12,6 +12,11 @@ const mockBack = jest.fn();
 const mockDismissTo = jest.fn();
 let mockSearchParams: Record<string, string> = {};
 
+jest.mock('react-native-safe-area-context', () => ({
+  ...jest.requireActual('react-native-safe-area-context'),
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: mockBack,
@@ -22,16 +27,12 @@ jest.mock('expo-router', () => ({
 
 // Mock sqlite
 const mockRunAsync = jest.fn();
-jest.mock('expo-sqlite', () => ({
-  useSQLiteContext: () => ({
-    getFirstAsync: jest.fn().mockResolvedValue({
-      voice_enabled: 1,
-      cues_enabled: 1,
-      music_enabled: 0,
-    }),
-    runAsync: (...args: any[]) => mockRunAsync(...args),
-  }),
-}));
+const mockGetFirstAsync = jest.fn();
+const mockDb = {
+  getFirstAsync: (...args: any[]) => mockGetFirstAsync(...args),
+  runAsync: (...args: any[]) => mockRunAsync(...args),
+};
+jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 
 // Mock keep-awake
 jest.mock('expo-keep-awake', () => ({
@@ -54,6 +55,14 @@ jest.mock('../src/features/workout/audio-service', () => ({
 }));
 
 describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
+  const waitForWorkoutSettings = async () => {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('button', { name: '開始' }).props.accessibilityState?.disabled).toBe(false);
+  };
+
   beforeEach(() => {
     jest.useFakeTimers({
       doNotFake: ['setTimeout', 'setImmediate'],
@@ -67,6 +76,11 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
     mockDismissTo.mockClear();
     mockRunAsync.mockClear();
     mockSearchParams = {};
+    mockGetFirstAsync.mockImplementation((sql: string) => Promise.resolve(
+      sql.includes('workout_preferences')
+        ? { work_seconds: 20, rest_seconds: 10, rounds: 4 }
+        : { voice_enabled: 1, cues_enabled: 1, music_enabled: 0 }
+    ));
   });
 
   afterEach(() => {
@@ -230,6 +244,7 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
       mockRunAsync.mockResolvedValue({ lastInsertRowId: 1, changes: 1 });
 
       const { getByRole, getByText } = render(<WorkoutScreen />);
+      await waitForWorkoutSettings();
 
       expect(Vibration.vibrate).not.toHaveBeenCalled();
 
@@ -250,16 +265,22 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
 
       // 儲存成功進入 completed，觸發一次完成震動
       expect(Vibration.vibrate).toHaveBeenCalledTimes(1);
-      expect(getByText('訓練完成！')).toBeTruthy();
-      expect(getByText('本日波比跳 Tabata 訓練已完成')).toBeTruthy();
+      expect(getByText('訓練完成')).toBeTruthy();
+      expect(getByText('本日波比跳訓練已完成')).toBeTruthy();
     });
 
     it('保存失敗時停在待重試狀態且不觸發震動；手動重試成功後才觸發一次震動', async () => {
-      mockRunAsync
-        .mockRejectedValueOnce(new Error('Write failed'))
-        .mockResolvedValue({ lastInsertRowId: 1, changes: 1 });
+      let shouldFailFirstCompletion = true;
+      mockRunAsync.mockImplementation((sql: string) => {
+        if (shouldFailFirstCompletion && sql.includes('INSERT INTO daily_completions')) {
+          shouldFailFirstCompletion = false;
+          return Promise.reject(new Error('Write failed'));
+        }
+        return Promise.resolve({ lastInsertRowId: 1, changes: 1 });
+      });
 
       const { getByRole, getByText, queryByText } = render(<WorkoutScreen />);
+      await waitForWorkoutSettings();
 
       fireEvent.press(getByRole('button', { name: '開始' }));
 
@@ -272,7 +293,7 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
       // 保存失敗：不觸發震動，不誤報已完成
       expect(Vibration.vibrate).not.toHaveBeenCalled();
       expect(getByText('儲存失敗')).toBeTruthy();
-      expect(queryByText('訓練完成！')).toBeNull();
+      expect(queryByText('訓練完成')).toBeNull();
 
       // 點擊重新儲存
       fireEvent.press(getByRole('button', { name: '重新儲存' }));
@@ -281,13 +302,14 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
 
       // 重試成功，觸發一次震動
       expect(Vibration.vibrate).toHaveBeenCalledTimes(1);
-      expect(getByText('訓練完成！')).toBeTruthy();
+      expect(getByText('訓練完成')).toBeTruthy();
     });
 
-    it('不記錄訓練（再做一次）：計時結束後顯示本次訓練已完成並觸發一次震動，不調用 SQLite', async () => {
+    it('不記錄訓練（再做一次）：計時結束後顯示訓練完成並觸發一次震動，不寫入完成紀錄', async () => {
       mockSearchParams = { mode: 'unrecorded' };
 
       const { getByRole, getByText, queryByText } = render(<WorkoutScreen />);
+      await waitForWorkoutSettings();
 
       fireEvent.press(getByRole('button', { name: '開始' }));
 
@@ -297,10 +319,13 @@ describe('Pre-Phase 3 訓練中動畫與完成回饋', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockRunAsync).not.toHaveBeenCalled();
+      expect(mockRunAsync).not.toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO daily_completions'),
+        expect.anything()
+      );
       expect(Vibration.vibrate).toHaveBeenCalledTimes(1);
-      expect(getByText('訓練完成！')).toBeTruthy();
-      expect(getByText('本次訓練已完成')).toBeTruthy();
+      expect(getByText('訓練完成')).toBeTruthy();
+      expect(queryByText('本次訓練已完成')).toBeNull();
       expect(queryByText('已記錄')).toBeNull();
     });
   });
