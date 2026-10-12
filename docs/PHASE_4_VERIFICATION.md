@@ -1,4 +1,6 @@
-# Phase 4 實作與靜態驗證
+# Phase 4 實作、靜態驗證與使用者驗收
+
+> 狀態：已實作，驗收通過（2026-10-10；依使用者實際驗收確認）
 
 日期：2026-10-10。主 agent 採 agent-orchestration-protocol Strict 流程；依使用者要求由 subagent 實作、主 agent 最終靜態驗證。
 
@@ -19,9 +21,9 @@
 
 ## 驗收界線
 
-自動測試由實作 subagent 執行，主 agent 最終驗證為靜態核對。iOS／Android 實機、小螢幕／大字級／螢幕閱讀器與實際聽感不由 mock 或型別檢查推定通過。未取得證據的 Done 條件保持未勾選。
+自動測試由實作 subagent 執行，主 agent 最終驗證為靜態核對。iOS／Android 實機、小螢幕／大字級／螢幕閱讀器與實際聽感不由 mock 或型別檢查推定通過。使用者於 2026-10-10 明確確認「phase4 已實作完畢, 我也實際驗收過」，因此 Phase 4 整體驗收通過、Done 成立。下表與計畫核取狀態依此確認更新；本次未另提供逐平台、裝置或無障礙情境的執行明細，也未重新執行自動測試。
 
-## 最終結果
+## 實作交付時的自動／靜態結果
 
 計時核心靜態核對已完成：
 
@@ -44,7 +46,7 @@
 音訊靜態核對已完成：
 
 - `audio-service.ts` 僅替換語音 mapping，保留全域操作序列、失效初始化、暫停／繼續與播放器 remove/release。
-- 2026-10-10 第一組提示修訂後，5 個語音 key 為 prepare、work_first_start、work_start、rest、completed；第一組使用「開始」片段，第二組起使用共用「準備，開始」。3 個提示音 key 及背景音樂不變。片段已確認與共用開始音檔尾段 PCM 完全相同；相關排程、hook、音訊服務與生命週期測試 47 項通過，實機聽感待驗收。
+- 2026-10-10 第一組提示修訂後，5 個語音 key 為 prepare、work_first_start、work_start、rest、completed；第一組使用「開始」片段，第二組起使用共用「準備，開始」。3 個提示音 key 及背景音樂不變。片段已確認與共用開始音檔尾段 PCM 完全相同；相關排程、hook、音訊服務與生命週期測試 47 項通過，交付當時實機聽感尚待驗收，後續使用者已確認 Phase 4 實際驗收通過。
 - 7 個編號語音與無引用的 test-cue 已刪除；src 中無舊 key、舊素材 caller、固定四組分母或固定兩分鐘文案。
 - 主 agent 以 Python wave/hashlib 靜態讀檔核對：開始草稿 44.1kHz/mono/16-bit、1.248254s、SHA-256 f34d9736ba793be8d9d5a6a527aab2c9d536999e71571ddfea45438473da965a；休息草稿同格式、0.658050s、SHA-256 c93ee6039a8f9b1650e1422f16fdab15802fadded9fedb85b0f305d6a680ac5c。符合 ASSETS_LICENSES.md。
 - 最短運動階段第一個最後五秒提示在開始後 5 秒，最短休息階段在開始後 1 秒；草稿時長分別短於此間距。未播放音訊，不能據此確認實際文案或聽感。
@@ -60,16 +62,16 @@
 | 2 | 預設／非預設時長與階段 | tabata 純函式與測試；預設 7 stages/110s+3s、12/8/3、10/6/1、10/6/10，通過 |
 | 3 | 範圍／步進／單組與最後不休息 | workout 公開加減互動走完上下限；tabata 僅在 round < rounds 插入休息，通過 |
 | 4 | 摘要、倒數、組數與同次參數 | ready 草稿 → start(parameters) → reducer.plan；timer-display.totalRounds；hook 暫停／繼續測試，通過 |
-| 5 | 保存／讀取失敗與重新讀回 | workout 公開互動、SQLite abort trigger 保留原值與其他 rows、關閉／重開檔案資料庫；自動驗證通過，App 實機重啟待驗收 |
-| 6 | 第一組「開始」、後續「準備，開始」、無舊組次語音 | schedule/caller/asset mapping 與新 key 播放測試通過；草稿實際文案與來源授權待確認 |
-| 7 | 提示關閉／音樂／重入／離開 | audio-service、workout-audio-lifecycle mock 五次重入、播放偏好、資源 remove 與暫停／繼續通過；原生實際出聲待驗收 |
-| 8 | 最後五秒／休息／準備完成／不重複 | plan schedule、hook 起始游標與邊界測試通過；草稿素材與原生聽感待驗收 |
+| 5 | 保存／讀取失敗與重新讀回 | workout 公開互動、SQLite abort trigger 保留原值與其他 rows、關閉／重開檔案資料庫；自動驗證通過；後續使用者確認 Phase 4 實際驗收通過 |
+| 6 | 第一組「開始」、後續「準備，開始」、無舊組次語音 | schedule/caller/asset mapping 與新 key 播放測試通過；使用者確認 Phase 4 實際驗收通過；來源／授權資料另見 ASSETS_LICENSES.md |
+| 7 | 提示關閉／音樂／重入／離開 | audio-service、workout-audio-lifecycle mock 五次重入、播放偏好、資源 remove 與暫停／繼續通過；後續使用者確認 Phase 4 實際驗收通過 |
+| 8 | 最後五秒／休息／準備完成／不重複 | plan schedule、hook 起始游標與邊界測試通過；後續使用者確認 Phase 4 實際驗收通過 |
 | 9 | 自訂完成記錄、取消、不記錄、重試與回饋 | 單組短訓練 INSERT、unrecorded 無 completion INSERT、日期鎖定／save retry／rest override／character 回歸通過 |
-| 10 | 背景安全暫停與手動續跑 | hook AppState + lifecycle 回歸、static caller 核對無 background service 或程序恢復，通過；原生鎖屏待驗收 |
-| 11 | 小螢幕／大字級／螢幕閱讀器／44×44 | shared IconButton、disabled state、標籤、row wrap/ScrollView/footer 靜態核對通過；各實機情境未驗收 |
+| 10 | 背景安全暫停與手動續跑 | hook AppState + lifecycle 回歸、static caller 核對無 background service 或程序恢復，通過；後續使用者確認 Phase 4 實際驗收通過 |
+| 11 | 小螢幕／大字級／螢幕閱讀器／44×44 | shared IconButton、disabled state、標籤、row wrap/ScrollView/footer 靜態核對通過；整體驗收依使用者確認通過，未另提供各情境明細 |
 | 12 | typecheck/lint/full tests | 見下方命令證據，通過；既存 act warnings 保留記錄 |
-| 13 | iOS／Android 實機非預設流程與聲音 | 未執行；待使用者／裝置驗收 |
-| 14 | 規格同步與範圍控管 | docs_sync 六份文件已由主 agent 核對；原 14 條驗收條件保留，僅勾選 1/2/3/4/9/12/14；未新增依賴、歷史或背景計時，範圍外防禦檢查通過；素材權利未完成 |
+| 13 | iOS／Android 實機非預設流程與聲音 | 使用者確認 Phase 4 已實際驗收；未另提供逐平台／裝置執行明細 |
+| 14 | 規格同步與範圍控管 | docs_sync 六份文件已由主 agent 核對；原 14 條驗收條件保留，依使用者整體驗收確認全部勾選；未新增依賴、歷史或背景計時，範圍外防禦檢查通過；素材權利未完成 |
 
 ## 最終命令證據
 
@@ -87,10 +89,12 @@
 - 測試：`__tests__/tabata.test.ts`、`use-tabata-timer.test.ts`、`timer-display.test.tsx`、`workout.test.tsx`、`index.test.tsx`、`database-migration-v3.test.ts`、`workout-character.test.tsx`、`audio-service.test.ts`、`audio-test.test.tsx`；新增 `workout-preferences.test.ts`，保留並適配既有未提交 `workout-audio-lifecycle.test.tsx`。`workout-rest-override.test.ts` 等未變更回歸測試仍通過。
 - 文件：`PRODUCT_SPEC.md`、`PRODUCT_DISCUSSIONS.md`、`DESIGN.md`、`CONTEXT.md`、`PRODUCT.md`、`ASSETS_LICENSES.md`、`PHASE_4_IMPLEMENTATION_PLAN.md` 與本驗證報告。
 
-## 狀態與限制
+## 最終驗收狀態與資料限制
 
-**BLOCKED（整個 Phase 4 完整驗收）**：程式實作及自動／靜態驗證已完成；素材來源、授權、實際文案／拼接聽感與 iOS／Android 實機驗收缺少證據，計畫的完整 Done 未成立。此狀態不表示自動測試失敗。
+**DONE（Phase 4 已實作，驗收通過）**：程式實作及自動／靜態驗證已完成；使用者於 2026-10-10 確認已實際驗收，取代交付當時的 BLOCKED 狀態。
 
-下一步：補齊語音素材來源與散布授權（或更換已授權錄音），驗聽共用開始／休息提示，於 iOS／Android 驗收非預設完整流程、設定重啟讀回、手動／安全暫停、再次進入與小螢幕／大字級／螢幕閱讀器。
+驗收依據為使用者本次整體確認，本報告不補造逐平台、裝置、字級、螢幕閱讀器或聽感紀錄。原有命令證據與交付時的觀察保留；本次僅更新文件狀態，未重新執行測試或建置 App。
+
+語音素材的錄音者、取得來源及散布授權資料仍獨立待補（見 `ASSETS_LICENSES.md`）；功能驗收通過不代表新增權利證據。
 
 範圍外防禦檢查：通過。未核准的新增行為：無。沒有 commit、push、PR、安裝／建置 App 或對外寫入。既有未提交音訊生命週期與首頁 profile-load 修正已保留。

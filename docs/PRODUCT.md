@@ -35,3 +35,7 @@ product
 ## Accessibility & Inclusion
 
 互動目標至少 44 × 44，支援系統字級與螢幕閱讀器；狀態不得只依賴顏色。主要文字在 pastel 表面維持可讀對比。訓練可在音訊失敗或全部關閉時依靠視覺完成，也可在無法持續看螢幕時依靠語音與提示音辨識階段。
+
+## Delivery Status
+
+Post-MVP Phase 4（計時自訂與音訊調整）已實作，使用者於 2026-10-10 確認已完成實際驗收。現行功能與驗收紀錄見 [PRODUCT_SPEC.md](PRODUCT_SPEC.md) 與 [PHASE_4_VERIFICATION.md](PHASE_4_VERIFICATION.md)。
