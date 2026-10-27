@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Subtle warm glow -->
+    <radialGradient id="s3-glow" cx="256" cy="210" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FEF9C3" stop-opacity="0.6"/>
+      <stop offset="70%" stop-color="#FAF9F6" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#FAF9F6" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Character drop shadow on canvas -->
+    <filter id="s3-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Background canvas -->
+  <rect width="512" height="512" fill="#FAF9F6"/>
+  <rect width="512" height="512" fill="url(#s3-glow)"/>
+
+  <!-- Morning Sun Disc behind character -->
+  <g transform="translate(256, 205)">
+    <!-- Clean geometric rays -->
+    <g stroke="#E5BF58" stroke-width="6" stroke-linecap="round" opacity="0.8">
+      <line x1="0" y1="-140" x2="0" y2="-156" />
+      <line x1="0" y1="140" x2="0" y2="156" />
+      <line x1="-140" y1="0" x2="-156" y2="0" />
+      <line x1="140" y1="0" x2="156" y2="0" />
+      <line x1="-99" y1="-99" x2="-110" y2="-110" />
+      <line x1="99" y1="-99" x2="110" y2="-110" />
+      <line x1="-99" y1="99" x2="-110" y2="110" />
+      <line x1="99" y1="99" x2="110" y2="110" />
+    </g>
+    <!-- Sun disc -->
+    <circle r="120" fill="#F1D997"/>
+    <!-- Morning Sun inner highlight -->
+    <path d="M-60 -30 C-20 -70 40 -65 72 -18" fill="none" stroke="#FAF0CD" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  </g>
+
+  <!-- Rolling grass hills at bottom -->
+  <!-- Layer 1: natureSky/distant hill -->
+  <path d="M0 385 C140 360 260 380 370 365 C430 355 480 365 512 372 V512 H0 Z" fill="#DCEAE6" opacity="0.6"/>
+  <!-- Layer 2: natureFoliage -->
+  <path d="M0 408 C120 378 240 405 350 382 C430 365 480 385 512 392 V512 H0 Z" fill="#A8B99F"/>
+  <!-- Layer 3: natureFoliageDeep -->
+  <path d="M0 442 C100 420 200 445 310 430 C410 415 470 432 512 425 V512 H0 Z" fill="#7C9076" opacity="0.95"/>
+
+  <!-- Grass blades -->
+  <g fill="none" stroke="#5D7357" stroke-width="3.5" stroke-linecap="round">
+    <path d="M70 438 C67 418 60 406 50 395"/>
+    <path d="M70 438 C76 417 84 406 94 397"/>
+    <path d="M70 438 C71 413 72 402 75 388"/>
+
+    <path d="M435 425 C431 407 425 396 416 387"/>
+    <path d="M435 425 C441 405 449 395 459 386"/>
+    <path d="M435 425 C436 402 438 392 441 380"/>
+  </g>
+
+  <!-- Mid-air drop shadow on the grass -->
+  <ellipse cx="256" cy="428" rx="54" ry="12" fill="#4E604B" opacity="0.45"/>
+
+  <!-- Exact Pixel Character Jump Frame -->
+  <!-- Transformed & scaled: midpoint at X=0, Y=-94.5 scaled by 2.2 to place feet at y=364, head at y=67 -->
+  <g filter="url(#s3-shadow)">
+    <g transform="translate(256, 423) scale(2.2)">
+  <path fill="#0284C7" d="M-55 -137h5v5h-5Z M60 -137h5v5h-5Z M-55 -132h5v5h-5Z M60 -132h5v5h-5Z M-55 -127h10v5h-10Z M45 -127h10v5h-10Z M-50 -122h10v5h-10Z M40 -122h10v5h-10Z M-50 -117h20v5h-20Z M30 -117h20v5h-20Z M-45 -112h20v5h-20Z M-10 -112h20v5h-20Z M25 -112h20v5h-20Z M-40 -107h30v5h-30Z M10 -107h30v5h-30Z M-20 -102h10v5h-10Z M10 -102h10v5h-10Z M-20 -97h10v5h-10Z M10 -97h10v5h-10Z M-20 -92h10v5h-10Z M10 -92h10v5h-10Z M-15 -87h5v5h-5Z M10 -87h5v5h-5Z" />
+  <path fill="#0369A1" d="M-65 -142h5v5h-5Z M40 -142h5v5h-5Z M-65 -137h5v5h-5Z M50 -137h5v5h-5Z M-65 -132h5v5h-5Z M50 -132h5v5h-5Z M-65 -127h5v5h-5Z M55 -127h5v5h-5Z M-60 -122h5v5h-5Z M50 -122h5v5h-5Z M-60 -117h5v5h-5Z M50 -117h5v5h-5Z M-55 -112h5v5h-5Z M45 -112h5v5h-5Z M-50 -107h5v5h-5Z M-10 -107h20v5h-20Z M45 -107h5v5h-5Z M-45 -102h5v5h-5Z M-10 -102h20v5h-20Z M40 -102h5v5h-5Z M-10 -97h20v5h-20Z M-10 -92h20v5h-20Z M-20 -87h5v5h-5Z M-10 -87h20v5h-20Z M15 -87h5v5h-5Z" />
+  <path fill="#0F172A" d="M-60 -162h20v5h-20Z M40 -162h20v5h-20Z M-65 -157h5v5h-5Z M-45 -157h5v5h-5Z M40 -157h5v5h-5Z M60 -157h5v5h-5Z M-65 -152h5v5h-5Z M-40 -152h5v5h-5Z M-10 -152h20v5h-20Z M35 -152h5v5h-5Z M60 -152h5v5h-5Z M-70 -147h5v5h-5Z M-40 -147h5v5h-5Z M-15 -147h5v5h-5Z M15 -147h5v5h-5Z M35 -147h5v5h-5Z M65 -147h5v5h-5Z M-70 -142h5v5h-5Z M-40 -142h5v5h-5Z M-20 -142h5v5h-5Z M20 -142h5v5h-5Z M35 -142h5v5h-5Z M65 -142h5v5h-5Z M-70 -137h5v5h-5Z M-50 -137h5v5h-5Z M-20 -137h5v5h-5Z M25 -137h5v5h-5Z M45 -137h5v5h-5Z M65 -137h5v5h-5Z M-70 -132h5v5h-5Z M-50 -132h5v5h-5Z M-20 -132h5v5h-5Z M25 -132h5v5h-5Z M45 -132h5v5h-5Z M65 -132h5v5h-5Z M-70 -127h5v5h-5Z M-45 -127h5v5h-5Z M-20 -127h5v5h-5Z M25 -127h5v5h-5Z M40 -127h5v5h-5Z M65 -127h5v5h-5Z M-65 -122h5v5h-5Z M-40 -122h5v5h-5Z M-25 -122h5v5h-5Z M-10 -122h5v5h-5Z M10 -122h5v5h-5Z M20 -122h5v5h-5Z M35 -122h5v5h-5Z M60 -122h5v5h-5Z M-65 -117h5v5h-5Z M-30 -117h5v5h-5Z M25 -117h5v5h-5Z M60 -117h5v5h-5Z M-60 -112h5v5h-5Z M-25 -112h5v5h-5Z M20 -112h5v5h-5Z M55 -112h5v5h-5Z M-55 -107h5v5h-5Z M50 -107h5v5h-5Z M-50 -102h5v5h-5Z M45 -102h5v5h-5Z M-25 -97h5v5h-5Z M20 -97h5v5h-5Z M-25 -92h5v5h-5Z M20 -92h5v5h-5Z M-25 -87h5v5h-5Z M20 -87h5v5h-5Z M-25 -82h50v5h-50Z M-30 -77h5v5h-5Z M25 -77h5v5h-5Z M-30 -72h5v5h-5Z M25 -72h5v5h-5Z M-35 -67h10v5h-10Z M-10 -67h20v5h-20Z M25 -67h10v5h-10Z M-35 -62h5v5h-5Z M-15 -62h5v5h-5Z M10 -62h5v5h-5Z M30 -62h5v5h-5Z M-35 -57h5v5h-5Z M-15 -57h5v5h-5Z M10 -57h5v5h-5Z M30 -57h5v5h-5Z M-35 -52h5v5h-5Z M-15 -52h5v5h-5Z M10 -52h5v5h-5Z M30 -52h5v5h-5Z M-35 -47h5v5h-5Z M-15 -47h5v5h-5Z M10 -47h5v5h-5Z M30 -47h5v5h-5Z M-35 -42h5v5h-5Z M-10 -42h5v5h-5Z M5 -42h5v5h-5Z M30 -42h5v5h-5Z M-40 -37h5v5h-5Z M-10 -37h5v5h-5Z M5 -37h5v5h-5Z M35 -37h5v5h-5Z M-40 -32h35v5h-35Z M5 -32h35v5h-35Z" />
+  <path fill="#1E293B" d="M-20 -77h40v5h-40Z M-20 -72h40v5h-40Z M-20 -67h10v5h-10Z M15 -67h10v5h-10Z M-25 -62h10v5h-10Z M20 -62h10v5h-10Z" />
+  <path fill="#334155" d="M-10 -147h5v5h-5Z M10 -147h5v5h-5Z M-15 -142h5v5h-5Z M15 -142h5v5h-5Z M-15 -137h5v5h-5Z M20 -137h5v5h-5Z M-15 -132h5v5h-5Z M20 -132h5v5h-5Z M-15 -127h5v5h-5Z M-20 -122h5v5h-5Z M0 -122h5v5h-5Z" />
+  <path fill="#38BDF8" d="M-60 -137h5v5h-5Z M55 -137h5v5h-5Z M-60 -132h5v5h-5Z M55 -132h5v5h-5Z M-60 -127h5v5h-5Z M60 -127h5v5h-5Z M-55 -122h5v5h-5Z M55 -122h5v5h-5Z M-55 -117h5v5h-5Z M-25 -117h50v5h-50Z M55 -117h5v5h-5Z M-50 -112h5v5h-5Z M-20 -112h10v5h-10Z M10 -112h10v5h-10Z M50 -112h5v5h-5Z M-45 -107h5v5h-5Z M40 -107h5v5h-5Z M-40 -102h20v5h-20Z M20 -102h20v5h-20Z" />
+  <path fill="#475569" d="M-25 -77h5v5h-5Z M20 -77h5v5h-5Z M-25 -72h5v5h-5Z M20 -72h5v5h-5Z M-25 -67h5v5h-5Z M10 -67h5v5h-5Z M-30 -62h5v5h-5Z M15 -62h5v5h-5Z" />
+  <path fill="#4A5845" d="M-30 -37h20v5h-20Z M15 -37h20v5h-20Z" />
+  <path fill="#7C9076" d="M-30 -42h20v5h-20Z M10 -42h20v5h-20Z M-35 -37h5v5h-5Z M10 -37h5v5h-5Z" />
+  <path fill="#9F1239" d="M-5 -147h15v5h-15Z M-10 -142h5v5h-5Z M10 -142h5v5h-5Z" />
+  <path fill="#E11D48" d="M-5 -142h15v5h-15Z M-10 -137h30v5h-30Z" />
+  <path fill="#F59E0B" d="M-60 -157h10v5h-10Z M45 -157h10v5h-10Z M-60 -152h10v5h-10Z M50 -152h5v5h-5Z M-65 -147h10v5h-10Z M40 -147h10v5h-10Z M-60 -142h5v5h-5Z M-45 -142h5v5h-5Z M45 -142h5v5h-5Z M60 -142h5v5h-5Z M-10 -132h5v5h-5Z M15 -132h5v5h-5Z M-10 -127h5v5h-5Z M5 -127h5v5h-5Z M20 -127h5v5h-5Z M-15 -122h5v5h-5Z M-5 -122h5v5h-5Z M5 -122h5v5h-5Z M15 -122h5v5h-5Z M-30 -57h5v5h-5Z M15 -57h5v5h-5Z M-30 -52h10v5h-10Z M15 -52h10v5h-10Z M-30 -47h5v5h-5Z M15 -47h5v5h-5Z" />
+  <path fill="#FDE047" d="M-50 -157h5v5h-5Z M55 -157h5v5h-5Z M-50 -152h5v5h-5Z M45 -152h5v5h-5Z M55 -152h5v5h-5Z M-55 -147h15v5h-15Z M50 -147h15v5h-15Z M-55 -142h10v5h-10Z M50 -142h10v5h-10Z M-5 -132h20v5h-20Z M-25 -57h10v5h-10Z M20 -57h10v5h-10Z M-20 -52h5v5h-5Z M25 -52h5v5h-5Z M-25 -47h10v5h-10Z M20 -47h10v5h-10Z" />
+  <path fill="#FEF9C3" d="M-45 -152h5v5h-5Z M40 -152h5v5h-5Z M-5 -127h5v5h-5Z M10 -127h5v5h-5Z" />
+  <path fill="#FFFFFF" d="M0 -127h5v5h-5Z M15 -127h5v5h-5Z" />
+    </g>
+  </g>
+</svg>
