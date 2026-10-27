@@ -243,10 +243,24 @@ bun install --frozen-lockfile</code></pre>
           <div class="step">
             <div class="step-num" aria-hidden="true">7</div>
             <div class="step-body">
-              <h3>只在簽署失敗時，於 Xcode 補設定</h3>
-              <p>上述命令執行後會有 <code>ios</code> 原生目錄。在專案目錄直接開啟 <code>ios/BurpeeJump.xcodeproj</code>，不要選 BurpeeJump 資料夾本身。於 Xcode 左側選 BurpeeJump 專案及 App target，打開 <strong>Signing &amp; Capabilities</strong>，勾選 <strong>Automatically manage signing</strong>，將 <strong>Team</strong> 設為你的 Personal Team，並確認 Bundle Identifier 與 <code>app.json</code> 相同。</p>
-              <pre><code>xed ios/BurpeeJump.xcodeproj</code></pre>
-              <p>等 Xcode 完成簽署準備後，回到終端機再次執行第 6 步。若 Xcode 顯示某個 capability 不支援免費帳號，須處理該能力或改用付費會員；不要只反覆重跑命令。</p>
+              <h3 id="renew-provisioning">簽署失敗時，用 Xcode 重新取得佈建描述檔</h3>
+              <p>若終端機出現 <code>No profiles for 'com.richardisrich.burpeejump' were found</code>、<code>Automatic signing is disabled</code>，或免費簽署到期後重裝失敗，先依下列步驟讓 Xcode 處理簽署。上述安裝命令執行後會有 <code>ios</code> 原生目錄；在 Mac 終端機的 BurpeeJump 專案目錄執行：</p>
+              <pre><code>xed ios/BurpeeJump.xcworkspace</code></pre>
+              <p>開啟 <strong>BurpeeJump.xcworkspace</strong>，讓 Xcode 一起載入 App 與 Pods 依賴。</p>
+              <ol>
+                <li>在 Xcode 左側按資料夾圖示，顯示 <strong>Project navigator</strong>（快捷鍵 <strong>⌘1</strong>）。</li>
+                <li>點左側<strong>最上層、藍色專案圖示旁的 BurpeeJump 名稱</strong>。其下灰色的 BurpeeJump 資料夾是原始碼；側欄另一個藍色圖示的 <strong>Pods</strong> 是依賴專案，簽署設定要從 BurpeeJump 進入。</li>
+                <li>中間偏左會出現 <strong>PROJECT／TARGETS</strong> 清單。點 <strong>TARGETS 底下的 BurpeeJump</strong>，選到 App target。</li>
+                <li>在右側上方點 <strong>Signing &amp; Capabilities</strong> 分頁，再點內容上方的 <strong>All</strong>（旁邊是 Debug、Release），讓設定涵蓋 Release。</li>
+                <li>勾選 <strong>Automatically manage signing</strong>，將 <strong>Team</strong> 設為原本使用的 <strong>Personal Team</strong>。若沒有自己的 Team，先到 <strong>Xcode → Settings → Apple Accounts</strong> 確認登入。</li>
+                <li>確認 <strong>Bundle Identifier</strong> 與 <code>app.json</code> 相同；本專案目前為 <code>com.richardisrich.burpeejump</code>。更新既有 App 時維持原本的識別碼與 Team。</li>
+                <li>保持手機連接且解鎖，在 Xcode 頂端、BurpeeJump scheme 旁的裝置選單選自己的實體 iPhone（例如 <strong>RichardIphone</strong>）。等待簽署處理完成；若出現 <strong>Try Again／Register Device／Set Up Signing</strong>，依當下提示操作。</li>
+                <li>確認簽署區域不再有紅色錯誤，並顯示 <strong>Provisioning Profile：Xcode Managed Profile</strong> 與 <strong>Signing Certificate：Apple Development…</strong>，再回到 Mac 終端機重新執行下方命令。</li>
+              </ol>
+              <div class="note"><p class="note-title">如何辨認選錯 Pods？</p><p>如果中間的 TARGETS 清單出現 EXConstants、ExpoAudio、hermes-engine、Pods-BurpeeJump 等大量項目，表示目前選到 Pods。回到左側最上層的 <strong>BurpeeJump 藍色專案圖示</strong>，再選 <strong>TARGETS → BurpeeJump</strong>。</p></div>
+              <pre><code>npx expo run:ios --configuration Release --device</code></pre>
+              <p>這是<strong>終端機命令</strong>。在裝置清單選自己的 iPhone，等待編譯及安裝完成；只看到 JavaScript 打包完成或 <code>Auto signing app using team(s)</code>，還不代表手機已安裝新版。保留手機上的舊 App，直接覆蓋安裝，以保留本機訓練紀錄。</p>
+              <p>若 Xcode 仍顯示簽署錯誤，依簽署區域的具體訊息處理；某個 capability 不支援免費帳號時，須處理該能力或改用付費會員。若終端機提到 <code>-allowProvisioningUpdates</code>，它是 <code>xcodebuild</code> 的參數，不能直接接在上述 Expo 命令後面。</p>
             </div>
           </div>
         </section>
@@ -278,10 +292,10 @@ bun install --frozen-lockfile</code></pre>
           <p class="section-kicker">排查</p>
           <h2 id="troubleshoot-title">卡住時先看這裡</h2>
           <details><summary>命令找不到實體 iPhone</summary><p>確認手機已解鎖、線材可傳輸資料、已選擇信任 Mac，且 Xcode 已完成裝置配對。重新執行 <code>npx expo run:ios --configuration Release --device</code>，在清單選實體裝置。</p></details>
-          <details><summary>出現 Signing、Provisioning 或 Team 錯誤</summary><p>在 Xcode 登入 Apple Account，確認 App target 的 Automatically manage signing 已開啟、Team 為 Personal Team、Bundle Identifier 唯一。必要時按 Xcode 顯示的 Register 或 Set Up Signing。免費帳號不支援的 capability 會需要另外處理。</p></details>
+          <details><summary>出現 Signing、Provisioning 或 Team 錯誤</summary><p>依照<a href="#renew-provisioning">第 7 步：用 Xcode 重新取得佈建描述檔</a>，選 BurpeeJump 專案的 App target，確認 All、自動簽署與 Personal Team。若 TARGETS 出現大量 Expo／React 套件，表示選到 Pods，請回到側欄最上層的 BurpeeJump 專案。</p></details>
           <details><summary>iPhone 找不到「開發者模式」</summary><p>先連接 Mac 並透過 Xcode 啟動配對。Apple 說明開發者模式選項可能要在開始配對後才會出現；開啟時需重開機並再次確認。</p></details>
           <details><summary>一直顯示 Reconnecting，並出現 developer disk image／0xe800010f</summary><p>先比對 iPhone 的 iOS 版本與 <code>xcodebuild -version</code>。這種錯誤可能表示目前 Xcode 缺少該裝置所需的開發映像。依 Apple 的 Xcode 裝置支援表，更新到支援該 iOS 的 Xcode；若新版 Xcode 要求更高版本 macOS，先更新 macOS。更新後重新開啟 Xcode、重接手機，再等待裝置完成準備。不要先刪除 DeveloperDiskImages 或反覆重建 BurpeeJump。</p></details>
-          <details><summary>App 一週後打不開</summary><p>免費 Personal Team 的安裝授權約 7 天到期。保持相同 Bundle Identifier，重新執行 Release 安裝流程即可。</p></details>
+          <details><summary>App 一週後打不開，或顯示「BurpeeJump 無法再使用」</summary><p>免費 Personal Team 的安裝授權約 7 天到期。保持相同 Bundle Identifier 與 Team，重新建置並覆蓋安裝；先保留手機上的 App，以免遺失本機紀錄。若重裝時找不到佈建描述檔，依照<a href="#renew-provisioning">第 7 步</a>先在 Xcode 處理簽署，再回終端機執行 Release 安裝命令。</p></details>
           <details><summary>看到 Expo 開發選單或要求 Metro</summary><p>檢查是否誤裝 Debug／development build，或從 Expo Go 開啟專案。用 <code>--configuration Release</code> 重建，並從 BurpeeJump 的獨立圖示開啟。</p></details>
         </section>
 
@@ -299,6 +313,6 @@ bun install --frozen-lockfile</code></pre>
       </main>
     </div>
   </div>
-  <footer><div>BurpeeJump · iPhone 免費 Release 實機安裝教學 · 2026-09-30</div></footer>
+  <footer><div>BurpeeJump · iPhone 免費 Release 實機安裝教學 · 更新於 2026-10-23</div></footer>
 </body>
 </html>
